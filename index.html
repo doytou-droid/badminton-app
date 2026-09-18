@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
-<title>🏸 จัดก๊วนแบด - Cloud Sync & Scoreboard</title>
+<title>🏸 จัดก๊วนแบด - Cloud Sync</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -132,7 +132,7 @@
       <div class="flex items-center justify-between gap-3">
         <div>
           <h2 class="font-bold text-gray-700">🔒 ใช้รายชื่อเช็คชื่อกรองในหน้าหลัก</h2>
-          <p class="text-xs text-gray-400 mt-0.5">เปิดไว้ ระบบจะจัดคู่/แสดงคิวรอ เฉพาะคนที่เช็คชื่อ "วันนี้" เท่านั้น</p>
+          <p class="text-xs text-gray-400 mt-0.5">เปิดไว้ ระบบจะจัดคู่/แสดงคิวรอ เฉพาะคนที่เช็คชื่อ "วันนี้" เท่านั้น (ถ้ายังไม่มีใครเช็คชื่อเลย จะใช้สมาชิกทั้งหมดแทนอัตโนมัติ)</p>
         </div>
         <button onclick="toggleAttendanceFilter()" id="attendanceFilterBtn" class="shrink-0 px-4 py-2 rounded-xl font-semibold text-sm transition"></button>
       </div>
@@ -175,13 +175,19 @@
   <div id="tab-schedule" class="hidden space-y-5">
     <div class="bg-white rounded-2xl shadow-md p-4 border border-gray-100">
       <h2 class="font-bold text-gray-700 mb-1">📋 จัดตารางแข่งขันล่วงหน้า</h2>
-      <p class="text-xs text-gray-400 mb-4">ระบบเกลี่ยรอบเล่น/พักให้เท่ากัน</p>
+      <p class="text-xs text-gray-400 mb-4">ระบบเกลี่ยรอบเล่น/พักให้เท่ากัน (ใช้เฉพาะคนเช็คชื่อวันนี้ ถ้าเปิดสวิตช์กรองไว้)</p>
+      <div class="mb-3">
+        <p class="text-sm font-semibold text-gray-600 mb-2">🏟️ จำนวนสนามจำลอง</p>
+        <div class="flex flex-wrap gap-2" id="schedCourtBtns"></div>
+      </div>
       <div class="flex gap-2">
         <input id="scheduleCount" type="number" min="1" placeholder="จำนวนแมตช์ เช่น 10" class="flex-1 px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
         <button onclick="generateSchedule()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 rounded-xl transition text-sm">สร้างตาราง</button>
       </div>
+      <button onclick="clearSchedule()" class="text-xs text-red-400 hover:text-red-600 mt-3">🗑 ล้างตารางทั้งหมด</button>
     </div>
     <div class="bg-white rounded-2xl shadow-md p-4 border border-gray-100">
+      <p id="schedulePendingInfo" class="text-xs text-gray-400 mb-3 font-medium"></p>
       <div id="scheduleList"></div>
     </div>
   </div>
@@ -189,6 +195,16 @@
   <!-- TAB STATS -->
   <div id="tab-stats" class="hidden space-y-5">
     <div class="bg-white rounded-2xl shadow-md p-4 border border-gray-100">
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <h2 class="font-bold text-gray-700">📅 กรองตามวันที่</h2>
+        <div class="flex items-center gap-2">
+          <select id="statsDateFilter" onchange="onStatsDateChange(this.value)" class="px-3 py-2 rounded-xl border border-gray-200 text-sm bg-white"></select>
+          <button onclick="openManualMatchModal()" class="bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold px-3 py-2 rounded-xl transition">+ เพิ่มบันทึก</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-md p-4 border border-gray-100 overflow-x-auto">
       <h2 class="font-bold text-gray-700 mb-3">🏆 อันดับผู้เล่น</h2>
       <table class="w-full text-sm">
         <thead><tr class="text-gray-400 text-xs border-b border-gray-100">
@@ -197,6 +213,7 @@
         <tbody id="statsTableBody"></tbody>
       </table>
     </div>
+
     <div class="bg-white rounded-2xl shadow-md p-4 border border-gray-100">
       <h2 class="font-bold text-gray-700 mb-3">📜 ประวัติการแข่งขัน</h2>
       <div id="matchHistoryList" class="space-y-1.5 max-h-[32rem] overflow-y-auto pr-1"></div>
@@ -206,63 +223,11 @@
 
 <div id="toast" class="hidden fixed bottom-5 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-sm px-5 py-2.5 rounded-full shadow-xl z-50 items-center gap-2"></div>
 
-<!-- ===================== EASY MOBILE FULLSCREEN SCOREBOARD ===================== -->
-<div id="mobileScoreboard" class="hidden fixed inset-0 bg-black z-50 flex-col justify-between p-3 sm:p-5 select-none touch-none fade-in">
-  
-  <!-- แถบเมนูด้านบน (Exit & Utility Controls) -->
-  <div class="flex justify-between items-center text-white border-b border-gray-800 pb-2 z-10">
-    <div class="flex items-center gap-2">
-      <span id="msbCourtTitle" class="text-xs font-bold bg-indigo-600 text-white px-3 py-1 rounded-full">สนาม 1</span>
-      <span id="msbServeInfo" class="text-xs text-amber-400 font-semibold truncate max-w-[150px] sm:max-w-none">🏸 เสิร์ฟ: ทีม A</span>
-    </div>
-    <div class="flex items-center gap-2">
-      <button onclick="undoMobileScore()" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-200 px-3 py-1.5 rounded-xl border border-gray-700">↩️ ย้อนแต้ม</button>
-      <button onclick="resetMobileScore()" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-200 px-3 py-1.5 rounded-xl border border-gray-700">🔄 รีเซ็ต</button>
-      <button onclick="closeModal('mobileScoreboard')" class="text-xs bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-1.5 rounded-xl">✕ ปิด</button>
-    </div>
-  </div>
-
-  <!-- พื้นที่กดคะแนนแบ่งครึ่งจอ (Large Touch Scoring Areas) -->
-  <div class="grid grid-cols-2 gap-3 my-auto h-[78vh]">
-    
-    <!-- ฝั่งทีม A (กดตรงไหนก็ได้เพื่อเพิ่มแต้ม A) -->
-    <div onclick="addMobileScore('A')" class="bg-gray-900/90 border-2 border-indigo-500/60 rounded-3xl flex flex-col justify-between items-center active:bg-indigo-950 active:scale-[0.99] transition cursor-pointer p-4 text-center">
-      <div class="w-full">
-        <span class="text-[10px] bg-indigo-900/80 text-indigo-300 px-2.5 py-0.5 rounded-full font-bold">TEAM A</span>
-        <h3 id="msbNameA" class="text-indigo-400 font-extrabold text-base sm:text-2xl mt-1 truncate">ทีม A</h3>
-      </div>
-      
-      <!-- ตัวเลขคะแนนยักษ์ -->
-      <span id="msbScoreA" class="text-8xl sm:text-[13rem] font-black text-white leading-none tracking-tight my-auto drop-shadow-lg">0</span>
-      
-      <p class="text-[11px] text-indigo-300/60 font-medium">👉 แตะฝั่งนี้ +1 แต้ม</p>
-    </div>
-
-    <!-- ฝั่งทีม B (กดตรงไหนก็ได้เพื่อเพิ่มแต้ม B) -->
-    <div onclick="addMobileScore('B')" class="bg-gray-900/90 border-2 border-purple-500/60 rounded-3xl flex flex-col justify-between items-center active:bg-purple-950 active:scale-[0.99] transition cursor-pointer p-4 text-center">
-      <div class="w-full">
-        <span class="text-[10px] bg-purple-900/80 text-purple-300 px-2.5 py-0.5 rounded-full font-bold">TEAM B</span>
-        <h3 id="msbNameB" class="text-purple-400 font-extrabold text-base sm:text-2xl mt-1 truncate">ทีม B</h3>
-      </div>
-      
-      <!-- ตัวเลขคะแนนยักษ์ -->
-      <span id="msbScoreB" class="text-8xl sm:text-[13rem] font-black text-white leading-none tracking-tight my-auto drop-shadow-lg">0</span>
-      
-      <p class="text-[11px] text-purple-300/60 font-medium">👉 แตะฝั่งนี้ +1 แต้ม</p>
-    </div>
-
-  </div>
-
-  <div class="text-center text-[11px] text-gray-500">
-    💡 หมุนโทรศัพท์เป็นแนวนอน เพื่อตั้งโชว์ให้ผู้เล่นในสนามดูได้ชัดเจนยิ่งขึ้น
-  </div>
-</div>
-
 <!-- End Match Modal -->
 <div id="endMatchModal" class="hidden fixed inset-0 bg-black/50 z-50 items-center justify-center p-4">
   <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 fade-in">
     <h3 class="font-bold text-lg text-gray-800 mb-1">🏁 จบแมตช์ - สนาม <span id="endMatchCourtNo"></span></h3>
-    <p class="text-xs text-gray-400 mb-4">บันทึกสกอร์เพื่อเก็บสถิติ</p>
+    <p class="text-xs text-gray-400 mb-4">บันทึกสกอร์ (ไม่บังคับ) เพื่อเก็บสถิติ</p>
     <div class="flex items-center justify-between gap-3 mb-2">
       <div class="flex-1 text-center">
         <p class="text-xs font-semibold text-indigo-500 mb-1 truncate" id="endMatchTeamA"></p>
@@ -282,8 +247,63 @@
   </div>
 </div>
 
+<!-- Swap Modal -->
+<div id="swapModal" class="hidden fixed inset-0 bg-black/50 z-50 items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 fade-in">
+    <h3 class="font-bold text-lg text-gray-800 mb-1">🔄 เปลี่ยนตัวผู้เล่น</h3>
+    <p class="text-xs text-gray-400 mb-4">แทนที่ <span id="swapOldName" class="font-semibold text-gray-600"></span> ด้วยผู้เล่นที่รออยู่</p>
+    <div id="swapPlayerList" class="space-y-1.5 max-h-64 overflow-y-auto mb-3"></div>
+    <button onclick="closeModal('swapModal')" class="w-full text-gray-400 text-xs py-1">ยกเลิก</button>
+  </div>
+</div>
+
+<!-- Manual Match Modal -->
+<div id="manualMatchModal" class="hidden fixed inset-0 bg-black/50 z-50 items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 fade-in max-h-[90vh] overflow-y-auto">
+    <h3 class="font-bold text-lg text-gray-800 mb-3">✍️ เพิ่มบันทึกการแข่งขัน</h3>
+    <div class="space-y-2">
+      <label class="text-xs text-gray-500">วันที่แข่ง</label>
+      <input id="manualDate" type="date" class="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm" />
+      <label class="text-xs text-gray-500">โหมด</label>
+      <select id="manualMode" onchange="renderManualPlayerSelects()" class="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm bg-white">
+        <option value="doubles">คู่ (2 vs 2)</option><option value="singles">เดี่ยว (1 vs 1)</option>
+      </select>
+      <label class="text-xs text-gray-500">ทีม A (เลือกตามโหมด)</label>
+      <select id="manualTeamA" multiple class="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm h-24"></select>
+      <label class="text-xs text-gray-500">ทีม B (เลือกตามโหมด)</label>
+      <select id="manualTeamB" multiple class="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm h-24"></select>
+      <div class="flex gap-2">
+        <input id="manualScoreA" type="number" placeholder="สกอร์ A" class="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-sm" />
+        <input id="manualScoreB" type="number" placeholder="สกอร์ B" class="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-sm" />
+      </div>
+    </div>
+    <div class="flex flex-col gap-2 mt-4">
+      <button onclick="saveManualMatch()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl transition text-sm">บันทึก</button>
+      <button onclick="closeModal('manualMatchModal')" class="w-full text-gray-400 text-xs py-1">ยกเลิก</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Match Modal -->
+<div id="editMatchModal" class="hidden fixed inset-0 bg-black/50 z-50 items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 fade-in">
+    <h3 class="font-bold text-lg text-gray-800 mb-3">✏️ แก้ไขบันทึก</h3>
+    <label class="text-xs text-gray-500">วันที่</label>
+    <input id="editMatchDate" type="date" class="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm mb-2" />
+    <div class="flex gap-2 mb-2">
+      <input id="editScoreA" type="number" placeholder="สกอร์ A" class="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-sm" />
+      <input id="editScoreB" type="number" placeholder="สกอร์ B" class="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-sm" />
+    </div>
+    <div class="flex flex-col gap-2 mt-2">
+      <button onclick="saveEditMatch()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl transition text-sm">บันทึกการแก้ไข</button>
+      <button onclick="closeModal('editMatchModal')" class="w-full text-gray-400 text-xs py-1">ยกเลิก</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ===================== FIREBASE CONFIG =====================
+// 🔴 ใส่ค่าเดิมที่คุณตั้งไว้จากขั้นตอนก่อนหน้า (อย่าลบทิ้ง)
 const firebaseConfig = {
   apiKey: "AIzaSyBPYr3CiV8CRlo66xQUYcjkaqvgSzcHxkY",
   authDomain: "badminton-app-dew.firebaseapp.com",
@@ -299,14 +319,15 @@ const db = firebase.firestore();
 let players = [];
 let liveState = defaultLiveState();
 let matchHistory = [];
-let attendanceData = {};
+let attendanceData = {}; // { 'YYYY-MM-DD': { playerIds: [...] } }
 let checkinDate = todayStr();
 let editingPlayerId = null;
 let pendingPhotoDataUrl = null;
 let removePhotoFlag = false;
-let currentMobileCourtId = null;
-let msbHistory = [];
+let swapCtx = null;
 let endMatchCtx = null;
+let editingMatchId = null;
+let statsDateFilter = 'all';
 
 const LEVEL_INFO = {
   N:{label:'มือใหม่',color:'bg-gray-100 text-gray-600',rank:1},
@@ -320,14 +341,22 @@ function defaultLiveState() {
   return {
     courtCount: 2, matchMode: 'doubles', gamePoint: 21, scheduleCourtCount: 2,
     useAttendanceFilter: false,
-    courts: [1,2].map(id=>({id, teamA:[null,null], teamB:[null,null], status:'empty', matchId:null, scoreboard:{scoreA:0,scoreB:0,servingTeam:'A'}})),
+    courts: [1,2].map(id=>({id, teamA:[null,null], teamB:[null,null], status:'empty', matchId:null})),
     schedule: [], partnerHistory: {}, singlesHistory: {},
   };
 }
 function clone(o){ return JSON.parse(JSON.stringify(o)); }
+function slotsPerTeam(mode){ return (mode||liveState.matchMode)==='singles' ? 1 : 2; }
+function requiredCount(mode){ return slotsPerTeam(mode)*2; }
 function todayStr(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function nowTimeStr(){ const d=new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
 function displayName(p){ if(!p) return '(ถูกลบแล้ว)'; return p.nickname || [p.firstName,p.lastName].filter(Boolean).join(' ') || '(ไม่มีชื่อ)'; }
 function escapeHtml(str){ const div=document.createElement('div'); div.textContent=str==null?'':str; return div.innerHTML; }
+function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
+function pkey(a,b){ return [a,b].sort().join('_'); }
+function getPartnerCount(a,b,hist){ return hist[pkey(a,b)]||0; }
+function addPartner(a,b,hist){ const k=pkey(a,b); hist[k]=(hist[k]||0)+1; }
+function levelRank(l){ return (LEVEL_INFO[l]||LEVEL_INFO.P).rank; }
 
 function showToast(msg){
   const t=document.getElementById('toast');
@@ -337,7 +366,50 @@ function showToast(msg){
 }
 function closeModal(id){ const el=document.getElementById(id); el.classList.add('hidden'); el.classList.remove('flex'); }
 
-// ===================== FIRESTORE REAL-TIME LISTENERS =====================
+// ===================== ATTENDANCE HELPERS =====================
+function getAttendingIds(date){ return (attendanceData[date] && attendanceData[date].playerIds) || []; }
+function getEligiblePlayers(){
+  if(!liveState.useAttendanceFilter) return players;
+  const ids = getAttendingIds(todayStr());
+  if(!ids.length) return players; // ยังไม่มีใครเช็คชื่อ ใช้สมาชิกทั้งหมดแทน กันเว็บใช้งานไม่ได้
+  return players.filter(p=>ids.includes(p.id));
+}
+async function toggleAttendance(playerId){
+  const date=checkinDate;
+  const current=getAttendingIds(date);
+  const next = current.includes(playerId) ? current.filter(id=>id!==playerId) : [...current, playerId];
+  try { await db.collection('attendance').doc(date).set({ playerIds: next, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }); }
+  catch(e){ showToast('บันทึกไม่สำเร็จ: '+e.message); }
+}
+async function setAllAttendance(all){
+  const date=checkinDate;
+  const ids = all ? players.map(p=>p.id) : [];
+  try {
+    await db.collection('attendance').doc(date).set({ playerIds: ids, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    showToast(all?'เลือกสมาชิกทั้งหมดแล้ว':'ล้างรายชื่อแล้ว');
+  } catch(e){ showToast('บันทึกไม่สำเร็จ: '+e.message); }
+}
+async function copyFromLatestAttendance(){
+  const dates=Object.keys(attendanceData).filter(d=>d!==checkinDate && attendanceData[d].playerIds && attendanceData[d].playerIds.length).sort((a,b)=>b.localeCompare(a));
+  if(!dates.length){ showToast('ยังไม่มีประวัติการเช็คชื่อให้คัดลอก'); return; }
+  const src=dates[0];
+  const ids=getAttendingIds(src).filter(id=>players.some(p=>p.id===id));
+  try {
+    await db.collection('attendance').doc(checkinDate).set({ playerIds: ids, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    showToast(`คัดลอกรายชื่อจากวันที่ ${formatThaiDate(src)} แล้ว (${ids.length} คน)`);
+  } catch(e){ showToast('คัดลอกไม่สำเร็จ: '+e.message); }
+}
+function shiftCheckinDate(delta){
+  const d=new Date(checkinDate+'T00:00:00');
+  d.setDate(d.getDate()+delta);
+  checkinDate=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  renderCheckin();
+}
+function onCheckinDateChange(v){ checkinDate=v||todayStr(); renderCheckin(); }
+function goToday(){ checkinDate=todayStr(); renderCheckin(); }
+function toggleAttendanceFilter(){ const next=clone(liveState); next.useAttendanceFilter=!next.useAttendanceFilter; pushLiveState(next); }
+
+// ===================== FIRESTORE LISTENERS (REAL-TIME) =====================
 let listenersReady = 0;
 function markReady(){ listenersReady++; if(listenersReady>=4) document.getElementById('syncStatus').textContent='🟢 เชื่อมต่อฐานข้อมูลแล้ว ข้อมูล sync แบบเรียลไทม์'; }
 
@@ -369,137 +441,57 @@ function pushLiveState(next){
   render();
 }
 
-// ===================== EASY MOBILE SCOREBOARD LOGIC =====================
-function openMobileScoreboard(courtId) {
-  currentMobileCourtId = courtId;
-  msbHistory = [];
-  
-  const court = liveState.courts.find(c => c.id === courtId);
-  if (!court) return;
-
-  if (!court.scoreboard) {
-    court.scoreboard = { scoreA: 0, scoreB: 0, servingTeam: 'A' };
-  }
-
-  renderMobileScoreboardUI();
-
-  const modal = document.getElementById('mobileScoreboard');
-  modal.classList.remove('hidden');
-  modal.classList.add('flex');
+// ===================== TAB SWITCH =====================
+function switchTab(tab){
+  ['main','checkin','members','schedule','stats'].forEach(t=>{
+    document.getElementById('tab-'+t).classList.toggle('hidden', t!==tab);
+    const btn=document.getElementById('navbtn-'+t);
+    btn.classList.toggle('bg-indigo-600', t===tab);
+    btn.classList.toggle('text-white', t===tab);
+    btn.classList.toggle('text-gray-500', t!==tab);
+  });
+  render();
 }
 
-function renderMobileScoreboardUI() {
-  const court = liveState.courts.find(c => c.id === currentMobileCourtId);
-  if (!court || !court.scoreboard) return;
-
-  const sb = court.scoreboard;
-
-  const pA = (court.teamA || []).map(id => players.find(p => p.id === id)).filter(Boolean);
-  const pB = (court.teamB || []).map(id => players.find(p => p.id === id)).filter(Boolean);
-
-  const nameA = pA.map(p => displayName(p)).join(' + ') || 'ทีม A';
-  const nameB = pB.map(p => displayName(p)).join(' + ') || 'ทีม B';
-
-  document.getElementById('msbCourtTitle').textContent = `สนาม ${court.id}`;
-  document.getElementById('msbNameA').textContent = nameA;
-  document.getElementById('msbNameB').textContent = nameB;
-  document.getElementById('msbScoreA').textContent = sb.scoreA;
-  document.getElementById('msbScoreB').textContent = sb.scoreB;
-
-  const currentServerScore = sb.servingTeam === 'A' ? sb.scoreA : sb.scoreB;
-  const serveSide = (currentServerScore % 2 === 0) ? 'คอร์ทขวา' : 'คอร์ทซ้าย';
-  const serverName = sb.servingTeam === 'A' ? nameA : nameB;
-
-  document.getElementById('msbServeInfo').textContent = `🏸 เสิร์ฟ: ${serverName} (${serveSide})`;
+// ===================== PHOTO HANDLING =====================
+function resizeImageFile(file, maxSize=220, quality=0.65){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const img=new Image();
+      img.onload=()=>{
+        let w=img.width,h=img.height;
+        if(w>h){ if(w>maxSize){h=h*maxSize/w; w=maxSize;} } else { if(h>maxSize){w=w*maxSize/h; h=maxSize;} }
+        const c=document.createElement('canvas'); c.width=w; c.height=h;
+        c.getContext('2d').drawImage(img,0,0,w,h);
+        resolve(c.toDataURL('image/jpeg',quality));
+      };
+      img.onerror=reject; img.src=e.target.result;
+    };
+    reader.onerror=reject; reader.readAsDataURL(file);
+  });
 }
-
-function addMobileScore(team) {
-  const court = liveState.courts.find(c => c.id === currentMobileCourtId);
-  if (!court || !court.scoreboard) return;
-
-  msbHistory.push(clone(court.scoreboard));
-
-  if (team === 'A') {
-    court.scoreboard.scoreA++;
-    court.scoreboard.servingTeam = 'A';
-  } else {
-    court.scoreboard.scoreB++;
-    court.scoreboard.servingTeam = 'B';
-  }
-
-  pushLiveState(liveState);
-  renderMobileScoreboardUI();
+async function handlePhotoInput(e){
+  const file=e.target.files[0]; if(!file) return;
+  pendingPhotoDataUrl = await resizeImageFile(file);
+  removePhotoFlag=false;
+  document.getElementById('photoPreview').src=pendingPhotoDataUrl;
+  document.getElementById('photoPreview').classList.remove('hidden');
+  document.getElementById('photoPlaceholder').classList.add('hidden');
 }
-
-function undoMobileScore() {
-  if (!msbHistory.length) {
-    showToast('ไม่มีประวัติแต้มก่อนหน้า');
-    return;
-  }
-  const court = liveState.courts.find(c => c.id === currentMobileCourtId);
-  if (!court) return;
-
-  court.scoreboard = msbHistory.pop();
-  pushLiveState(liveState);
-  renderMobileScoreboardUI();
+function clearPhotoInput(){
+  pendingPhotoDataUrl=null; removePhotoFlag=true;
+  document.getElementById('photoInput').value='';
+  document.getElementById('photoPreview').classList.add('hidden');
+  document.getElementById('photoPlaceholder').classList.remove('hidden');
 }
-
-function resetMobileScore() {
-  if (!confirm('ต้องการรีเซ็ตคะแนนสนามนี้เป็น 0 - 0 หรือไม่?')) return;
-  const court = liveState.courts.find(c => c.id === currentMobileCourtId);
-  if (!court || !court.scoreboard) return;
-
-  court.scoreboard = { scoreA: 0, scoreB: 0, servingTeam: 'A' };
-  msbHistory = [];
-
-  pushLiveState(liveState);
-  renderMobileScoreboardUI();
-}
-
-// ===================== RENDERING COURTS WITH SCOREBOARD BUTTON =====================
-function renderCourts() {
-  const container = document.getElementById('courtsGrid');
-  if (!container) return;
-
-  container.innerHTML = liveState.courts.map(court => {
-    const pA = (court.teamA || []).map(id => players.find(p => p.id === id)).filter(Boolean);
-    const pB = (court.teamB || []).map(id => players.find(p => p.id === id)).filter(Boolean);
-    const sb = court.scoreboard || { scoreA: 0, scoreB: 0 };
-
-    return `
-      <div class="bg-white rounded-2xl shadow-md p-4 border border-gray-100 flex flex-col justify-between">
-        <div class="flex items-center justify-between mb-3 border-b border-gray-100 pb-2">
-          <span class="font-bold text-gray-700">สนาม ${court.id}</span>
-          <div class="flex items-center gap-1.5">
-            <span class="text-xs px-2 py-0.5 rounded-full font-bold bg-indigo-50 text-indigo-600">${sb.scoreA} : ${sb.scoreB}</span>
-            <button onclick="openMobileScoreboard(${court.id})" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1 px-2.5 rounded-xl transition shadow flex items-center gap-1">📲 จอคะแนน</button>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-2 mb-3">
-          <div class="bg-indigo-50/50 p-2.5 rounded-xl border border-indigo-100">
-            <p class="text-[10px] font-bold text-indigo-500 mb-1">ทีม A</p>
-            ${pA.map(p => `<p class="text-xs font-semibold text-gray-700 truncate">${escapeHtml(displayName(p))}</p>`).join('') || '<p class="text-xs text-gray-300 italic">ว่าง</p>'}
-          </div>
-          <div class="bg-purple-50/50 p-2.5 rounded-xl border border-purple-100">
-            <p class="text-[10px] font-bold text-purple-500 mb-1">ทีม B</p>
-            ${pB.map(p => `<p class="text-xs font-semibold text-gray-700 truncate">${escapeHtml(displayName(p))}</p>`).join('') || '<p class="text-xs text-gray-300 italic">ว่าง</p>'}
-          </div>
-        </div>
-
-        <button onclick="openEndMatchModal(${court.id})" class="w-full bg-emerald-50 hover:bg-emerald-100 text-emerald-600 font-bold py-2 rounded-xl transition text-xs">🏁 จบแมตช์สนามนี้</button>
-      </div>
-    `;
-  }).join('');
-}
-
-// ===================== MEMBER FORM CRUD =====================
 function avatarHtml(p, size='avatar-sm'){
   if(p && p.photo) return `<img src="${p.photo}" class="${size} rounded-full object-cover border-2 border-white shadow shrink-0" />`;
   const initial = p ? (p.nickname||p.firstName||'?').charAt(0).toUpperCase() : '?';
   return `<div class="${size} rounded-full bg-indigo-200 text-indigo-700 flex items-center justify-center font-bold border-2 border-white shadow shrink-0">${initial}</div>`;
 }
 
+// ===================== MEMBER CRUD =====================
 function resetPlayerForm(){
   editingPlayerId=null; pendingPhotoDataUrl=null; removePhotoFlag=false;
   document.getElementById('memberFirstName').value='';
@@ -513,144 +505,738 @@ function resetPlayerForm(){
   document.getElementById('memberSaveBtn').textContent='บันทึกสมาชิก';
   document.getElementById('memberCancelBtn').classList.add('hidden');
 }
-
+function editPlayer(id){
+  const p = players.find(x=>x.id===id); if(!p) return;
+  editingPlayerId=id; pendingPhotoDataUrl=null; removePhotoFlag=false;
+  document.getElementById('memberFirstName').value=p.firstName||'';
+  document.getElementById('memberLastName').value=p.lastName||'';
+  document.getElementById('memberNickname').value=p.nickname||'';
+  document.getElementById('memberLevel').value=p.level||'P';
+  if (p.photo) { document.getElementById('photoPreview').src=p.photo; document.getElementById('photoPreview').classList.remove('hidden'); document.getElementById('photoPlaceholder').classList.add('hidden'); }
+  else { document.getElementById('photoPreview').classList.add('hidden'); document.getElementById('photoPlaceholder').classList.remove('hidden'); }
+  document.getElementById('memberFormTitle').textContent='✏️ แก้ไขข้อมูลสมาชิก';
+  document.getElementById('memberSaveBtn').textContent='บันทึกการแก้ไข';
+  document.getElementById('memberCancelBtn').classList.remove('hidden');
+  switchTab('members');
+  window.scrollTo({top:0, behavior:'smooth'});
+}
 async function savePlayerForm(){
-  const firstName = document.getElementById('memberFirstName').value.trim();
-  const lastName = document.getElementById('memberLastName').value.trim();
-  const nickname = document.getElementById('memberNickname').value.trim();
-  const level = document.getElementById('memberLevel').value;
-  
-  if(!nickname && !firstName) { showToast('กรุณากรอกชื่อเล่นหรือชื่อจริง'); return; }
-
-  let photoUrl = null;
-  if(editingPlayerId) {
-    const p = players.find(x => x.id === editingPlayerId);
-    if(p) photoUrl = p.photo || null;
-  }
-  if(removePhotoFlag) photoUrl = null;
-  if(pendingPhotoDataUrl) photoUrl = pendingPhotoDataUrl;
-
-  const data = {
-    firstName, lastName, nickname, level, photo: photoUrl,
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-  };
-
+  const firstName=document.getElementById('memberFirstName').value.trim();
+  const lastName=document.getElementById('memberLastName').value.trim();
+  const nickname=document.getElementById('memberNickname').value.trim();
+  const level=document.getElementById('memberLevel').value;
+  if(!firstName && !nickname){ showToast('กรุณากรอกชื่อจริงหรือชื่อเล่นอย่างน้อย 1 อย่าง'); return; }
+  const data={firstName,lastName,nickname,level};
+  if (pendingPhotoDataUrl) data.photo=pendingPhotoDataUrl;
+  else if (removePhotoFlag) data.photo=null;
   try {
-    if(editingPlayerId) {
-      await db.collection('players').doc(editingPlayerId).update(data);
-      showToast('แก้ไขข้อมูลสมาชิกเรียบร้อย');
-    } else {
-      data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-      await db.collection('players').add(data);
-      showToast('เพิ่มสมาชิกเรียบร้อย');
-    }
+    if (editingPlayerId) { await db.collection('players').doc(editingPlayerId).update(data); showToast('แก้ไขข้อมูลสมาชิกแล้ว'); }
+    else { data.createdAt=firebase.firestore.FieldValue.serverTimestamp(); await db.collection('players').add(data); showToast('เพิ่มสมาชิกใหม่แล้ว 🎉'); }
     resetPlayerForm();
-  } catch(e) { showToast('บันทึกไม่สำเร็จ: ' + e.message); }
+  } catch(e){ showToast('เกิดข้อผิดพลาด: '+e.message); }
 }
-
-async function handlePhotoInput(e){
-  const file = e.target.files[0]; if(!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    pendingPhotoDataUrl = ev.target.result;
-    removePhotoFlag = false;
-    document.getElementById('photoPreview').src = pendingPhotoDataUrl;
-    document.getElementById('photoPreview').classList.remove('hidden');
-    document.getElementById('photoPlaceholder').classList.add('hidden');
-  };
-  reader.readAsDataURL(file);
-}
-
-function clearPhotoInput(){
-  pendingPhotoDataUrl = null; removePhotoFlag = true;
-  document.getElementById('photoInput').value = '';
-  document.getElementById('photoPreview').classList.add('hidden');
-  document.getElementById('photoPlaceholder').classList.remove('hidden');
-}
-
-// ===================== TAB SWITCH & GENERAL RENDER =====================
-function switchTab(tab){
-  ['main','checkin','members','schedule','stats'].forEach(t=>{
-    document.getElementById('tab-'+t).classList.toggle('hidden', t!==tab);
-    const btn=document.getElementById('navbtn-'+t);
-    btn.classList.toggle('bg-indigo-600', t===tab);
-    btn.classList.toggle('text-white', t===tab);
-    btn.classList.toggle('text-gray-500', t!==tab);
+async function deletePlayer(id){
+  const p=players.find(x=>x.id===id); if(!p) return;
+  if(!confirm(`ลบสมาชิก "${displayName(p)}" ออกจากก๊วน?`)) return;
+  const next=clone(liveState);
+  let touched=false;
+  next.courts.forEach(c=>{
+    c.teamA=c.teamA.map(pid=>{ if(pid===id){touched=true; return null;} return pid; });
+    c.teamB=c.teamB.map(pid=>{ if(pid===id){touched=true; return null;} return pid; });
+    recalcCourtStatus(c);
   });
-  render();
+  next.schedule = next.schedule.filter(m=>![...m.teamA,...m.teamB].includes(id));
+  try {
+    if (touched) await db.collection('liveState').doc('main').set(next);
+    await db.collection('players').doc(id).delete();
+    showToast('ลบสมาชิกแล้ว');
+  } catch(e){ showToast('ลบไม่สำเร็จ: '+e.message); }
 }
 
-function render() {
-  document.getElementById('statTotal').textContent = players.length;
-  document.getElementById('memberCount').textContent = players.length;
-  document.getElementById('memberListCount').textContent = players.length;
-  
-  renderCourts();
-  
-  if (currentMobileCourtId && !document.getElementById('mobileScoreboard').classList.contains('hidden')) {
-    renderMobileScoreboardUI();
+// ===================== LIVE STATE HELPERS =====================
+function computePlayingIds(state){
+  const s=new Set();
+  state.courts.forEach(c=>{ c.teamA.forEach(id=>{if(id) s.add(id);}); c.teamB.forEach(id=>{if(id) s.add(id);}); });
+  return s;
+}
+function recalcCourtStatus(c){
+  const filled=[...c.teamA,...c.teamB].filter(Boolean).length;
+  const total=c.teamA.length+c.teamB.length;
+  c.status = filled===0 ? 'empty' : (filled<total ? 'partial' : 'playing');
+}
+function gamesTodayCount(playerId){
+  const t=todayStr(); let n=0;
+  matchHistory.forEach(m=>{ if(m.date===t){ const ids=[...(m.teamA||[]).map(x=>x.id), ...(m.teamB||[]).map(x=>x.id)]; if(ids.includes(playerId)) n++; } });
+  return n;
+}
+function getSortedQueue(state){
+  const playing=computePlayingIds(state);
+  const eligible=getEligiblePlayers();
+  const waiting=eligible.filter(p=>!playing.has(p.id));
+  shuffle(waiting);
+  waiting.sort((a,b)=>gamesTodayCount(a.id)-gamesTodayCount(b.id));
+  return waiting;
+}
+function formTeams(four, hist){
+  const combos=[[[0,1],[2,3]],[[0,2],[1,3]],[[0,3],[1,2]]];
+  let best=combos[0], bestScore=Infinity;
+  combos.forEach(combo=>{
+    const [a1,a2]=combo[0],[b1,b2]=combo[1];
+    const partnerScore=getPartnerCount(four[a1].id,four[a2].id,hist)+getPartnerCount(four[b1].id,four[b2].id,hist);
+    const levelDiff=Math.abs((levelRank(four[a1].level)+levelRank(four[a2].level))-(levelRank(four[b1].level)+levelRank(four[b2].level)));
+    const score=partnerScore*10+levelDiff+Math.random()*0.4;
+    if(score<bestScore){bestScore=score; best=combo;}
+  });
+  return { teamA:[four[best[0][0]].id, four[best[0][1]].id], teamB:[four[best[1][0]].id, four[best[1][1]].id] };
+}
+function pickBestPair(pool, hist){
+  let best=null, bestScore=Infinity;
+  for(let i=0;i<pool.length;i++) for(let j=i+1;j<pool.length;j++){
+    const a=pool[i], b=pool[j];
+    const score=getPartnerCount(a.id,b.id,hist)*10 + Math.abs(levelRank(a.level)-levelRank(b.level)) + Math.random()*0.4;
+    if(score<bestScore){bestScore=score; best={a,b};}
   }
+  return best;
+}
+function fillCourt(court, next){
+  if (court.status==='playing' || court.status==='partial') return false;
+  let idx=next.schedule.findIndex(m=>m.status==='pending');
+  while(idx!==-1){
+    const m=next.schedule[idx];
+    const ids=[...m.teamA,...m.teamB];
+    const stillExist = ids.every(id=>players.some(p=>p.id===id));
+    const playing=computePlayingIds(next);
+    const valid = stillExist && ids.every(id=>!playing.has(id));
+    if(valid){
+      court.teamA=[...m.teamA]; court.teamB=[...m.teamB]; court.status='playing'; court.matchId=m.id;
+      m.status='playing'; return true;
+    } else { m.status='cancelled'; idx=next.schedule.findIndex(mm=>mm.status==='pending'); }
+  }
+  const need=requiredCount(next.matchMode);
+  const queue=getSortedQueue(next);
+  if(queue.length<need) return false;
+  if(next.matchMode==='doubles'){
+    const four=queue.slice(0,4);
+    const {teamA,teamB}=formTeams(four,next.partnerHistory);
+    court.teamA=teamA; court.teamB=teamB;
+  } else {
+    const pool=queue.slice(0,Math.min(6,queue.length));
+    const pair=pickBestPair(pool,next.singlesHistory);
+    court.teamA=[pair.a.id]; court.teamB=[pair.b.id];
+  }
+  court.status='playing'; court.matchId=null;
+  return true;
 }
 
-function setCourtCount(c) {
-  const next = clone(liveState);
-  next.courtCount = c;
-  next.courts = Array.from({length: c}, (_, i) => next.courts[i] || {
-    id: i+1, teamA:[null,null], teamB:[null,null], status:'empty', matchId:null, scoreboard:{scoreA:0,scoreB:0,servingTeam:'A'}
-  });
+// ===================== MAIN ACTIONS =====================
+function setCourtCount(n){
+  const next=clone(liveState);
+  const arr=[];
+  for(let i=0;i<n;i++){
+    if(next.courts[i]) arr.push(next.courts[i]);
+    else arr.push({id:i+1, teamA:Array(slotsPerTeam(next.matchMode)).fill(null), teamB:Array(slotsPerTeam(next.matchMode)).fill(null), status:'empty', matchId:null});
+  }
+  next.courts=arr.map((c,i)=>({...c,id:i+1}));
+  next.courtCount=n;
   pushLiveState(next);
 }
+function setMatchMode(mode){
+  if(mode===liveState.matchMode) return;
+  const anyActive=liveState.courts.some(c=>c.status!=='empty');
+  if(anyActive && !confirm('เปลี่ยนโหมดจะล้างสนามทั้งหมด ยืนยันหรือไม่?')) return;
+  const next=clone(liveState);
+  next.matchMode=mode;
+  const n=slotsPerTeam(mode);
+  next.courts=next.courts.map(c=>({id:c.id, teamA:Array(n).fill(null), teamB:Array(n).fill(null), status:'empty', matchId:null}));
+  if(next.schedule.length){ next.schedule=[]; showToast('ล้างตารางล่วงหน้าด้วย เนื่องจากเปลี่ยนโหมด'); }
+  pushLiveState(next);
+}
+function setGamePoint(v){ const next=clone(liveState); next.gamePoint=parseInt(v); pushLiveState(next); }
 
-function openEndMatchModal(courtId) {
-  endMatchCtx = courtId;
-  document.getElementById('endMatchCourtNo').textContent = courtId;
-  const court = liveState.courts.find(c => c.id === courtId);
-  if(!court) return;
-
-  const pA = (court.teamA || []).map(id => players.find(p => p.id === id)).filter(Boolean);
-  const pB = (court.teamB || []).map(id => players.find(p => p.id === id)).filter(Boolean);
-
-  document.getElementById('endMatchTeamA').textContent = pA.map(displayName).join(' + ') || 'ทีม A';
-  document.getElementById('endMatchTeamB').textContent = pB.map(displayName).join(' + ') || 'ทีม B';
-  document.getElementById('scoreA').value = court.scoreboard?.scoreA || 0;
-  document.getElementById('scoreB').value = court.scoreboard?.scoreB || 0;
-
-  const modal = document.getElementById('endMatchModal');
-  modal.classList.remove('hidden'); modal.classList.add('flex');
+function autoArrange(){
+  const next=clone(liveState);
+  const empty=next.courts.filter(c=>c.status==='empty');
+  if(!empty.length){ showToast('ไม่มีสนามว่างให้จัดคู่'); return; }
+  let filled=0;
+  empty.forEach(c=>{ if(fillCourt(c,next)) filled++; });
+  if(!filled){ showToast('ผู้เล่นไม่พอสำหรับจัดคู่ลงสนาม (ลองเช็คว่ามีคนเช็คชื่อวันนี้ครบหรือยัง)'); return; }
+  pushLiveState(next);
+  showToast(`จัดคู่ลงสนามสำเร็จ ${filled} สนาม 🎉`);
+}
+function cancelMatch(courtId){
+  if(!confirm('ยกเลิกแมตช์นี้และคืนผู้เล่นเข้าคิว?')) return;
+  clearCourtSlots(courtId);
+}
+function clearCourtSlots(courtId){
+  const next=clone(liveState);
+  const c=next.courts.find(x=>x.id===courtId); if(!c) return;
+  if(c.matchId){ const m=next.schedule.find(s=>s.id===c.matchId); if(m) m.status='pending'; }
+  const n=slotsPerTeam(next.matchMode);
+  c.teamA=Array(n).fill(null); c.teamB=Array(n).fill(null); c.status='empty'; c.matchId=null;
+  pushLiveState(next);
+  showToast(`ล้างสนาม ${courtId} แล้ว`);
 }
 
-async function confirmEndMatch(saveScore) {
-  if (!endMatchCtx) return;
-  const courtId = endMatchCtx;
-  const court = liveState.courts.find(c => c.id === courtId);
-  
-  if (court) {
-    if (saveScore) {
-      const sA = parseInt(document.getElementById('scoreA').value) || 0;
-      const sB = parseInt(document.getElementById('scoreB').value) || 0;
-      await db.collection('matchHistory').add({
-        date: todayStr(), courtId, teamA: court.teamA, teamB: court.teamB,
-        scoreA: sA, scoreB: sB, createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      showToast('บันทึกผลการแข่งขันเรียบร้อย');
-    }
-    court.teamA = [null, null];
-    court.teamB = [null, null];
-    court.scoreboard = { scoreA: 0, scoreB: 0, servingTeam: 'A' };
-    pushLiveState(liveState);
+// End match
+function openEndMatchModal(courtId){
+  const court=liveState.courts.find(c=>c.id===courtId); if(!court||court.status!=='playing') return;
+  endMatchCtx=courtId;
+  const nameOf=id=>displayName(players.find(p=>p.id===id));
+  document.getElementById('endMatchCourtNo').textContent=courtId;
+  document.getElementById('endMatchTeamA').textContent='A: '+court.teamA.map(nameOf).join(' & ');
+  document.getElementById('endMatchTeamB').textContent='B: '+court.teamB.map(nameOf).join(' & ');
+  document.getElementById('scoreA').value=''; document.getElementById('scoreB').value='';
+  document.getElementById('scoreA').placeholder='0-'+liveState.gamePoint;
+  document.getElementById('scoreB').placeholder='0-'+liveState.gamePoint;
+  document.getElementById('endMatchModal').classList.remove('hidden'); document.getElementById('endMatchModal').classList.add('flex');
+}
+async function confirmEndMatch(withScore){
+  const courtId=endMatchCtx;
+  const next=clone(liveState);
+  const court=next.courts.find(c=>c.id===courtId); if(!court) return;
+  const teamA=[...court.teamA], teamB=[...court.teamB];
+  let scoreA=null, scoreB=null;
+  if(withScore){
+    scoreA=parseInt(document.getElementById('scoreA').value);
+    scoreB=parseInt(document.getElementById('scoreB').value);
+    if(isNaN(scoreA)||isNaN(scoreB)){ showToast('กรุณาใส่สกอร์ให้ครบทั้งสองฝั่ง'); return; }
   }
+  if(next.matchMode==='doubles'){ addPartner(teamA[0],teamA[1],next.partnerHistory); addPartner(teamB[0],teamB[1],next.partnerHistory); }
+  else { addPartner(teamA[0],teamB[0],next.singlesHistory); }
+
+  if(withScore){
+    try {
+      await db.collection('matchHistory').add({
+        date: todayStr(), time: nowTimeStr(),
+        teamA: teamA.map(id=>({id, name:displayName(players.find(p=>p.id===id))})),
+        teamB: teamB.map(id=>({id, name:displayName(players.find(p=>p.id===id))})),
+        scoreA, scoreB, mode: next.matchMode, court: court.id,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } catch(e){ showToast('บันทึกสกอร์ไม่สำเร็จ: '+e.message); }
+  }
+  if(court.matchId){ const m=next.schedule.find(s=>s.id===court.matchId); if(m){ m.status='done'; m.scoreA=scoreA; m.scoreB=scoreB; } }
+  const n=slotsPerTeam(next.matchMode);
+  court.teamA=Array(n).fill(null); court.teamB=Array(n).fill(null); court.status='empty'; court.matchId=null;
+  const filled=fillCourt(court,next);
   closeModal('endMatchModal');
+  pushLiveState(next);
+  showToast(filled?`จบแมตช์สนาม ${courtId} → ส่งคู่ถัดไปแล้ว`:`จบแมตช์สนาม ${courtId} แล้ว (รอผู้เล่นเพิ่ม)`);
 }
 
-// Keyboard shortcuts (Arrow Left/Right to score)
-document.addEventListener('keydown', (e) => {
-  const modal = document.getElementById('mobileScoreboard');
-  if (!modal || modal.classList.contains('hidden')) return;
+// Swap (แบบกด)
+function openSwapModal(courtId, team, idx){
+  const court=liveState.courts.find(c=>c.id===courtId);
+  const oldId=court[team][idx];
+  swapCtx={courtId,team,idx};
+  document.getElementById('swapOldName').textContent=displayName(players.find(p=>p.id===oldId));
+  const playing=computePlayingIds(liveState);
+  const waiting=getEligiblePlayers().filter(p=>!playing.has(p.id));
+  const list=document.getElementById('swapPlayerList');
+  if(!waiting.length){ list.innerHTML=`<p class="text-center text-gray-400 text-sm py-4">ไม่มีผู้เล่นว่างสำหรับเปลี่ยนตัว 😢</p>`; }
+  else {
+    list.innerHTML=waiting.map(p=>{
+      const li=LEVEL_INFO[p.level]||LEVEL_INFO.P;
+      return `<button onclick="doSwap('${p.id}')" class="w-full flex items-center gap-2 bg-gray-50 hover:bg-indigo-50 rounded-xl px-3 py-2 transition text-left">
+        ${avatarHtml(p,'avatar-sm')}
+        <span class="font-medium text-gray-700 text-sm flex-1 truncate">${escapeHtml(displayName(p))}</span>
+        <span class="text-[10px] px-2 py-0.5 rounded-full ${li.color}">${li.label}</span>
+      </button>`;
+    }).join('');
+  }
+  document.getElementById('swapModal').classList.remove('hidden'); document.getElementById('swapModal').classList.add('flex');
+}
+function doSwap(newId){
+  if(!swapCtx) return;
+  const {courtId,team,idx}=swapCtx;
+  const next=clone(liveState);
+  const court=next.courts.find(c=>c.id===courtId);
+  court[team][idx]=newId;
+  if(court.matchId){ const m=next.schedule.find(s=>s.id===court.matchId); if(m) m.status='pending'; court.matchId=null; }
+  recalcCourtStatus(court);
+  closeModal('swapModal');
+  pushLiveState(next);
+  showToast('เปลี่ยนตัวผู้เล่นแล้ว');
+}
 
-  if (e.key === 'ArrowLeft') addMobileScore('A');
-  if (e.key === 'ArrowRight') addMobileScore('B');
-  if (e.key === 'z' || e.key === 'Z') undoMobileScore();
+// ===================== DRAG & DROP =====================
+let dragState=null;
+document.addEventListener('pointerdown', e=>{
+  if(e.pointerType==='mouse' && e.button!==0) return;
+  const token=e.target.closest('[data-player-token]'); if(!token) return;
+  dragState={ playerId:token.getAttribute('data-player-token'), startX:e.clientX, startY:e.clientY, moved:false, ghost:null, hoverTarget:null };
+  document.addEventListener('pointermove', onPointerMove);
+  document.addEventListener('pointerup', onPointerUp, {once:true});
+  document.addEventListener('pointercancel', onPointerCancel, {once:true});
 });
+function onPointerMove(e){
+  if(!dragState) return;
+  const dx=e.clientX-dragState.startX, dy=e.clientY-dragState.startY;
+  if(!dragState.moved){ if(Math.abs(dx)<6&&Math.abs(dy)<6) return; dragState.moved=true; startGhost(e); document.body.classList.add('dragging-active'); }
+  if(dragState.ghost){ dragState.ghost.style.left=e.clientX+'px'; dragState.ghost.style.top=e.clientY+'px'; }
+  updateHoverTarget(e.clientX,e.clientY);
+  e.preventDefault();
+}
+function startGhost(e){
+  const p=players.find(pl=>pl.id===dragState.playerId);
+  const ghost=document.createElement('div');
+  ghost.className='fixed z-[999] pointer-events-none bg-indigo-600 text-white text-sm font-semibold px-3 py-2 rounded-xl shadow-2xl flex items-center gap-2';
+  ghost.innerHTML=(p&&p.photo?`<img src="${p.photo}" class="w-6 h-6 rounded-full object-cover"/>`:'🏸')+' '+(p?escapeHtml(displayName(p)):'');
+  ghost.style.left=e.clientX+'px'; ghost.style.top=e.clientY+'px'; ghost.style.transform='translate(-50%,-120%) scale(1.05)';
+  document.body.appendChild(ghost); dragState.ghost=ghost;
+}
+function updateHoverTarget(x,y){
+  clearHoverHighlight();
+  const el=document.elementFromPoint(x,y); if(!el){ dragState.hoverTarget=null; return; }
+  const slot=el.closest('[data-court]'); const dz=el.closest('[data-dropzone]');
+  if(slot){ slot.classList.add('ring-2','ring-indigo-400','ring-offset-1'); dragState.hoverTarget={type:'slot', courtId:parseInt(slot.dataset.court), team:slot.dataset.team, idx:parseInt(slot.dataset.idx)}; }
+  else if(dz){ dz.classList.add('ring-2','ring-amber-300','ring-offset-1'); dragState.hoverTarget={type:'queue'}; }
+  else dragState.hoverTarget=null;
+}
+function clearHoverHighlight(){
+  document.querySelectorAll('.ring-indigo-400').forEach(el=>el.classList.remove('ring-2','ring-indigo-400','ring-offset-1'));
+  document.querySelectorAll('.ring-amber-300').forEach(el=>el.classList.remove('ring-2','ring-amber-300','ring-offset-1'));
+}
+function onPointerCancel(){
+  document.removeEventListener('pointermove', onPointerMove);
+  if(dragState&&dragState.ghost) dragState.ghost.remove();
+  clearHoverHighlight(); document.body.classList.remove('dragging-active'); dragState=null;
+}
+function onPointerUp(){
+  document.removeEventListener('pointermove', onPointerMove);
+  if(!dragState) return;
+  const moved=dragState.moved, target=dragState.hoverTarget, playerId=dragState.playerId;
+  if(dragState.ghost) dragState.ghost.remove();
+  clearHoverHighlight(); document.body.classList.remove('dragging-active'); dragState=null;
+  if(moved && target) performDrop(playerId, target);
+}
+function performDrop(playerId, target){
+  const next=clone(liveState);
+  let curCourt=null, curTeam=null, curIdx=null;
+  for(const c of next.courts){
+    const ia=c.teamA.indexOf(playerId); if(ia!==-1){ curCourt=c; curTeam='teamA'; curIdx=ia; break; }
+    const ib=c.teamB.indexOf(playerId); if(ib!==-1){ curCourt=c; curTeam='teamB'; curIdx=ib; break; }
+  }
+  if(target.type==='queue'){
+    if(curCourt){ curCourt[curTeam][curIdx]=null; if(curCourt.matchId){const m=next.schedule.find(s=>s.id===curCourt.matchId); if(m)m.status='pending';} curCourt.matchId=null; recalcCourtStatus(curCourt); pushLiveState(next); showToast('นำผู้เล่นกลับเข้าคิวแล้ว'); }
+    return;
+  }
+  if(target.type==='slot'){
+    const targetCourt=next.courts.find(c=>c.id===target.courtId); if(!targetCourt) return;
+    const destArr=targetCourt[target.team]; if(target.idx<0||target.idx>=destArr.length) return;
+    const destPlayerId=destArr[target.idx];
+    if(destPlayerId===playerId) return;
+    if(destPlayerId && curCourt){ curCourt[curTeam][curIdx]=destPlayerId; }
+    else if(curCourt){ curCourt[curTeam][curIdx]=null; }
+    destArr[target.idx]=playerId;
+    if(targetCourt.matchId){ const m=next.schedule.find(s=>s.id===targetCourt.matchId); if(m) m.status='pending'; targetCourt.matchId=null; }
+    recalcCourtStatus(targetCourt);
+    if(curCourt && curCourt.id!==targetCourt.id){
+      if(curCourt.matchId){ const m=next.schedule.find(s=>s.id===curCourt.matchId); if(m) m.status='pending'; curCourt.matchId=null; }
+      recalcCourtStatus(curCourt);
+    }
+    pushLiveState(next);
+    showToast('วางผู้เล่นลงสนามแล้ว');
+  }
+}
+
+// ===================== SCHEDULE =====================
+function setScheduleCourtCount(n){ const next=clone(liveState); next.scheduleCourtCount=n; pushLiveState(next); }
+function generateSchedule(){
+  const requested=parseInt(document.getElementById('scheduleCount').value);
+  if(!requested||requested<1){ showToast('กรุณาระบุจำนวนแมตช์'); return; }
+  const need=requiredCount(liveState.matchMode);
+  const eligible=getEligiblePlayers();
+  if(eligible.length<need){ showToast(`ผู้เล่นที่พร้อมลงเล่นมีไม่พอ (ต้องการอย่างน้อย ${need} คน)`); return; }
+  const next=clone(liveState);
+  const temp=eligible.map(p=>({id:p.id, games: gamesTodayCount(p.id)}));
+  const tempHist = clone(next.matchMode==='doubles'?next.partnerHistory:next.singlesHistory);
+  const newSchedule=[]; let round=1, generated=0, safety=0;
+  while(generated<requested && safety<requested*4+30){
+    safety++;
+    let pool=shuffle([...temp]).sort((a,b)=>a.games-b.games);
+    const used=new Set(); let filledThisRound=0;
+    while(filledThisRound<next.scheduleCourtCount && generated<requested){
+      const avail=pool.filter(t=>!used.has(t.id));
+      if(avail.length<need) break;
+      let teamA,teamB;
+      if(next.matchMode==='doubles'){
+        const four=avail.slice(0,4).map(t=>players.find(p=>p.id===t.id));
+        ({teamA,teamB}=formTeams(four,tempHist));
+      } else {
+        const poolP=avail.slice(0,Math.min(6,avail.length)).map(t=>players.find(p=>p.id===t.id));
+        const pair=pickBestPair(poolP,tempHist);
+        teamA=[pair.a.id]; teamB=[pair.b.id];
+      }
+      newSchedule.push({id:'m'+Date.now()+generated+Math.random().toString(36).slice(2,5), round, teamA, teamB, status:'pending', scoreA:null, scoreB:null});
+      [...teamA,...teamB].forEach(pid=>{ used.add(pid); const t=temp.find(x=>x.id===pid); if(t) t.games++; });
+      if(next.matchMode==='doubles'){ addPartner(teamA[0],teamA[1],tempHist); addPartner(teamB[0],teamB[1],tempHist); }
+      else addPartner(teamA[0],teamB[0],tempHist);
+      generated++; filledThisRound++;
+    }
+    if(filledThisRound===0) break;
+    round++;
+  }
+  if(!newSchedule.length){ showToast('ผู้เล่นไม่พอสำหรับสร้างตาราง'); return; }
+  next.schedule=newSchedule;
+  pushLiveState(next);
+  showToast(`สร้างตารางสำเร็จ ${newSchedule.length} แมตช์ 🎉`);
+}
+function reshuffleMatch(id){
+  const next=clone(liveState);
+  const m=next.schedule.find(s=>s.id===id); if(!m||m.status!=='pending') return;
+  if(next.matchMode==='doubles'){
+    const ids=shuffle([...m.teamA,...m.teamB]);
+    const four=ids.map(i=>players.find(p=>p.id===i)).filter(Boolean);
+    if(four.length<4){ showToast('ผู้เล่นถูกลบไปแล้ว'); return; }
+    const {teamA,teamB}=formTeams(four,next.partnerHistory);
+    m.teamA=teamA; m.teamB=teamB;
+  } else {
+    const two=[...m.teamA,...m.teamB].map(i=>players.find(p=>p.id===i)).filter(Boolean);
+    if(two.length<2){ showToast('ผู้เล่นถูกลบไปแล้ว'); return; }
+    m.teamA=[two[1].id]; m.teamB=[two[0].id];
+  }
+  pushLiveState(next); showToast('สุ่มคู่ใหม่แล้ว');
+}
+function deleteScheduleMatch(id){ const next=clone(liveState); next.schedule=next.schedule.filter(s=>s.id!==id); pushLiveState(next); }
+function clearSchedule(){
+  if(!liveState.schedule.length){ showToast('ยังไม่มีตาราง'); return; }
+  if(!confirm('ล้างตารางทั้งหมด?')) return;
+  const next=clone(liveState); next.schedule=[]; pushLiveState(next);
+}
+
+// ===================== MATCH HISTORY CRUD =====================
+function openManualMatchModal(){
+  document.getElementById('manualDate').value=todayStr();
+  document.getElementById('manualMode').value=liveState.matchMode;
+  document.getElementById('manualScoreA').value=''; document.getElementById('manualScoreB').value='';
+  renderManualPlayerSelects();
+  document.getElementById('manualMatchModal').classList.remove('hidden'); document.getElementById('manualMatchModal').classList.add('flex');
+}
+function renderManualPlayerSelects(){
+  const opts=players.map(p=>`<option value="${p.id}">${escapeHtml(displayName(p))}</option>`).join('');
+  document.getElementById('manualTeamA').innerHTML=opts;
+  document.getElementById('manualTeamB').innerHTML=opts;
+}
+async function saveManualMatch(){
+  const date=document.getElementById('manualDate').value;
+  const mode=document.getElementById('manualMode').value;
+  const need=mode==='singles'?1:2;
+  const teamAIds=[...document.getElementById('manualTeamA').selectedOptions].map(o=>o.value);
+  const teamBIds=[...document.getElementById('manualTeamB').selectedOptions].map(o=>o.value);
+  const scoreA=parseInt(document.getElementById('manualScoreA').value);
+  const scoreB=parseInt(document.getElementById('manualScoreB').value);
+  if(!date){ showToast('กรุณาเลือกวันที่'); return; }
+  if(teamAIds.length!==need || teamBIds.length!==need){ showToast(`เลือกผู้เล่นทีมละ ${need} คนให้ครบ`); return; }
+  if(isNaN(scoreA)||isNaN(scoreB)){ showToast('กรุณาใส่สกอร์ให้ครบ'); return; }
+  try{
+    await db.collection('matchHistory').add({
+      date, time: nowTimeStr(), mode,
+      teamA: teamAIds.map(id=>({id, name:displayName(players.find(p=>p.id===id))})),
+      teamB: teamBIds.map(id=>({id, name:displayName(players.find(p=>p.id===id))})),
+      scoreA, scoreB, court: 0,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    closeModal('manualMatchModal');
+    showToast('เพิ่มบันทึกการแข่งขันแล้ว');
+  } catch(e){ showToast('บันทึกไม่สำเร็จ: '+e.message); }
+}
+function openEditMatch(id){
+  const m=matchHistory.find(x=>x.id===id); if(!m) return;
+  editingMatchId=id;
+  document.getElementById('editMatchDate').value=m.date;
+  document.getElementById('editScoreA').value=m.scoreA;
+  document.getElementById('editScoreB').value=m.scoreB;
+  document.getElementById('editMatchModal').classList.remove('hidden'); document.getElementById('editMatchModal').classList.add('flex');
+}
+async function saveEditMatch(){
+  if(!editingMatchId) return;
+  const date=document.getElementById('editMatchDate').value;
+  const scoreA=parseInt(document.getElementById('editScoreA').value);
+  const scoreB=parseInt(document.getElementById('editScoreB').value);
+  if(!date || isNaN(scoreA) || isNaN(scoreB)){ showToast('กรอกข้อมูลให้ครบถ้วน'); return; }
+  try{
+    await db.collection('matchHistory').doc(editingMatchId).update({date, scoreA, scoreB});
+    closeModal('editMatchModal'); showToast('แก้ไขบันทึกแล้ว');
+  } catch(e){ showToast('แก้ไขไม่สำเร็จ: '+e.message); }
+}
+async function deleteMatchRecord(id){
+  if(!confirm('ลบบันทึกการแข่งขันนี้?')) return;
+  try{ await db.collection('matchHistory').doc(id).delete(); showToast('ลบบันทึกแล้ว'); }
+  catch(e){ showToast('ลบไม่สำเร็จ: '+e.message); }
+}
+function onStatsDateChange(v){ statsDateFilter=v; render(); }
+
+// ===================== RENDER =====================
+function render(){
+  renderMembersOnMain();
+  renderMemberCards();
+  renderMatchModeButtons();
+  renderCourtButtons();
+  renderCourts();
+  renderQueue();
+  renderStatsBar();
+  renderModeBanner();
+  renderSchedCourtButtons();
+  renderSchedule();
+  renderStatsDateOptions();
+  renderStats();
+  renderCheckin();
+}
+
+function renderStatsBar(){
+  const playing=computePlayingIds(liveState);
+  document.getElementById('statTotal').textContent=players.length;
+  document.getElementById('statCheckedIn').textContent=getAttendingIds(todayStr()).filter(id=>players.some(p=>p.id===id)).length;
+  document.getElementById('statPlaying').textContent=playing.size;
+  document.getElementById('statWaiting').textContent=Math.max(getEligiblePlayers().length-playing.size,0);
+  document.getElementById('memberCount').textContent=players.length;
+  document.getElementById('memberListCount').textContent=players.length;
+}
+function renderModeBanner(){
+  const pending=liveState.schedule.filter(m=>m.status==='pending').length;
+  const modeText=liveState.matchMode==='singles'?'🧍 โหมดเดี่ยว (1v1)':'👥 โหมดคู่ (2v2)';
+  const filterText = liveState.useAttendanceFilter ? ' · 🔒 กรองเฉพาะคนเช็คชื่อวันนี้' : '';
+  document.getElementById('modeBanner').textContent=(pending>0?`📋 ใช้ตารางล่วงหน้า (เหลือ ${pending}) · `:'🔀 โหมดสุ่มสด · ')+modeText+filterText;
+  const hint=document.getElementById('queueHint');
+  if(liveState.useAttendanceFilter){
+    const notCheckedIn = players.length - getEligiblePlayers().length;
+    hint.textContent = notCheckedIn>0 ? `ลากผู้เล่นมาปล่อยเพื่อพักคิวได้ · มี ${notCheckedIn} คนยังไม่เช็คชื่อวันนี้ (ไม่แสดงในคิว)` : 'ลากผู้เล่นจากสนามมาปล่อยตรงนี้เพื่อพักคิวได้';
+  } else {
+    hint.textContent='ลากผู้เล่นจากสนามมาปล่อยตรงนี้เพื่อพักคิวได้';
+  }
+}
+function renderMatchModeButtons(){
+  const wrap=document.getElementById('matchModeBtns');
+  const modes=[{k:'doubles',label:'👥 คู่'},{k:'singles',label:'🧍 เดี่ยว'}];
+  wrap.innerHTML=modes.map(m=>`<button onclick="setMatchMode('${m.k}')" class="flex-1 py-2 rounded-xl font-semibold text-sm transition ${liveState.matchMode===m.k?'bg-indigo-600 text-white shadow':'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}">${m.label}</button>`).join('');
+}
+function renderCourtButtons(){
+  [1,2,3,4].forEach(n=>{
+    const btn=document.getElementById('court-btn-'+n);
+    btn.className = n===liveState.courtCount ? 'flex-1 py-2 rounded-xl font-semibold transition bg-indigo-600 text-white shadow' : 'flex-1 py-2 rounded-xl font-semibold transition bg-white text-gray-600 border border-gray-200 hover:bg-gray-50';
+  });
+}
+function renderMembersOnMain(){
+  const container=document.getElementById('memberList');
+  if(!players.length){ container.innerHTML=`<p class="text-center text-gray-400 py-4 text-sm">ยังไม่มีสมาชิก ไปเพิ่มที่แท็บ "สมาชิก"</p>`; return; }
+  const playing=computePlayingIds(liveState);
+  const todayAttending=getAttendingIds(todayStr());
+  container.innerHTML=players.map(p=>{
+    const li=LEVEL_INFO[p.level]||LEVEL_INFO.P;
+    const isPlaying=playing.has(p.id);
+    const attended=todayAttending.includes(p.id);
+    const attendBadge = attended ? '<span class="text-[11px]" title="เช็คชื่อมาก๊วนวันนี้">✅</span>' : '<span class="text-[11px] opacity-40" title="ยังไม่เช็คชื่อวันนี้">⬜</span>';
+    return `<div class="flex items-center justify-between bg-gray-50 hover:bg-gray-100 rounded-xl px-2 py-1.5 transition fade-in">
+      <div class="flex items-center gap-2 min-w-0 player-token cursor-grab active:cursor-grabbing" data-player-token="${p.id}" style="touch-action:none;">
+        ${avatarHtml(p,'avatar-sm')}
+        <span class="font-medium text-gray-800 text-sm truncate max-w-[80px]">${escapeHtml(displayName(p))}</span>
+        <span class="text-[10px] px-1.5 py-0.5 rounded-full whitespace-nowrap ${li.color}">${li.label}</span>
+        ${attendBadge}
+      </div>
+      <span class="text-[11px] ${isPlaying?'text-emerald-500':'text-gray-400'} whitespace-nowrap">${isPlaying?'🟢 เล่นอยู่':'⏳ รอ'}</span>
+    </div>`;
+  }).join('');
+}
+function renderMemberCards(){
+  const container=document.getElementById('memberCards');
+  if(!players.length){ container.innerHTML=`<p class="text-center text-gray-400 py-6 text-sm col-span-2">ยังไม่มีสมาชิก เพิ่มจากฟอร์มด้านบนได้เลย</p>`; return; }
+  container.innerHTML=players.map(p=>{
+    const li=LEVEL_INFO[p.level]||LEVEL_INFO.P;
+    return `<div class="flex items-center gap-3 bg-gray-50 rounded-xl p-3 fade-in">
+      ${avatarHtml(p,'w-14 h-14')}
+      <div class="flex-1 min-w-0">
+        <p class="font-semibold text-gray-800 text-sm truncate">${escapeHtml(displayName(p))}</p>
+        <p class="text-[11px] text-gray-400 truncate">${escapeHtml([p.firstName,p.lastName].filter(Boolean).join(' ')||'-')}</p>
+        <span class="text-[10px] px-2 py-0.5 rounded-full ${li.color}">${li.label}</span>
+      </div>
+      <div class="flex flex-col gap-1 shrink-0">
+        <button onclick="editPlayer('${p.id}')" class="text-xs text-indigo-500 hover:text-indigo-700">✏️ แก้ไข</button>
+        <button onclick="deletePlayer('${p.id}')" class="text-xs text-red-400 hover:text-red-600">🗑 ลบ</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function renderCourts(){
+  document.getElementById('courtsGrid').innerHTML = liveState.courts.map(c=>courtCardTemplate(c)).join('');
+}
+function courtCardTemplate(c){
+  const req=requiredCount(liveState.matchMode);
+  const filled=[...c.teamA,...c.teamB].filter(Boolean).length;
+  const statusBadge = c.status==='playing' ? '<span class="text-[11px] bg-white/20 text-white px-2 py-0.5 rounded-full">กำลังเล่น</span>'
+    : c.status==='partial' ? `<span class="text-[11px] bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full">รอเพิ่ม (${filled}/${req})</span>`
+    : '<span class="text-[11px] bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full">ว่าง</span>';
+  const headerBg = c.status==='playing' ? 'bg-gradient-to-r from-indigo-500 to-purple-500' : (c.status==='partial'?'bg-amber-50':'bg-gray-100');
+  const headerText = c.status==='empty' ? 'text-gray-500' : (c.status==='partial'?'text-amber-600':'text-white');
+
+  function slotHtml(team){
+    return c[team].map((pid,idx)=>{
+      if(pid){
+        const p=players.find(pl=>pl.id===pid);
+        if(!p) return emptySlot(c.id,team,idx);
+        const li=LEVEL_INFO[p.level]||LEVEL_INFO.P;
+        return `<div class="drop-slot bg-white border-2 border-indigo-100 rounded-xl px-2 py-1.5 flex items-center justify-between gap-1" data-court="${c.id}" data-team="${team}" data-idx="${idx}">
+          <div class="flex items-center gap-1.5 min-w-0 player-token cursor-grab active:cursor-grabbing" data-player-token="${p.id}" style="touch-action:none;">
+            ${avatarHtml(p,'avatar-sm')}
+            <span class="font-semibold text-gray-800 text-sm truncate">${escapeHtml(displayName(p))}</span>
+          </div>
+          <div class="flex items-center gap-1 shrink-0">
+            <span class="text-[9px] px-1.5 py-0.5 rounded-full ${li.color}">${li.label}</span>
+            <button onclick="openSwapModal(${c.id},'${team}',${idx})" title="เปลี่ยนตัว" class="text-gray-300 hover:text-indigo-500 text-xs">🔄</button>
+          </div>
+        </div>`;
+      }
+      return emptySlot(c.id,team,idx);
+    }).join('');
+  }
+  function emptySlot(courtId,team,idx){
+    return `<div class="drop-slot border-2 border-dashed border-gray-200 rounded-xl px-2 py-3 text-center text-[11px] text-gray-300" data-court="${courtId}" data-team="${team}" data-idx="${idx}">⬇ ลากมาวาง</div>`;
+  }
+  let actions='';
+  if(c.status==='playing') actions=`<div class="flex gap-2 mt-3"><button onclick="openEndMatchModal(${c.id})" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-semibold py-2 rounded-xl transition text-sm">🏁 จบแมตช์</button><button onclick="cancelMatch(${c.id})" class="px-3 bg-gray-100 hover:bg-gray-200 text-gray-500 rounded-xl transition text-sm">✕</button></div>`;
+  else if(c.status==='partial') actions=`<button onclick="clearCourtSlots(${c.id})" class="w-full mt-3 bg-gray-100 hover:bg-gray-200 text-gray-500 font-medium py-2 rounded-xl transition text-xs">🗑 ล้างสนามนี้</button>`;
+  else actions=`<p class="text-center text-[11px] text-gray-300 mt-3">🏸 ว่าง - ลากผู้เล่นมาวาง หรือกด "จัดคู่อัตโนมัติ"</p>`;
+
+  return `<div class="bg-white rounded-2xl shadow-md overflow-hidden border border-gray-100 fade-in">
+    <div class="${headerBg} px-4 py-2.5 flex justify-between items-center"><span class="${headerText} font-bold text-sm">🏟️ สนาม ${c.id}</span>${statusBadge}</div>
+    <div class="p-3">
+      <div class="grid grid-cols-2 gap-2">
+        <div class="space-y-1.5 border-r border-dashed border-gray-100 pr-1.5"><p class="text-[10px] font-bold text-indigo-400 text-center">ทีม A</p>${slotHtml('teamA')}</div>
+        <div class="space-y-1.5 pl-1.5"><p class="text-[10px] font-bold text-purple-400 text-center">ทีม B</p>${slotHtml('teamB')}</div>
+      </div>
+      ${actions}
+    </div>
+  </div>`;
+}
+function renderQueue(){
+  const playing=computePlayingIds(liveState);
+  const queue=getEligiblePlayers().filter(p=>!playing.has(p.id)).sort((a,b)=>gamesTodayCount(a.id)-gamesTodayCount(b.id) || displayName(a).localeCompare(displayName(b),'th'));
+  document.getElementById('waitingCount').textContent=queue.length;
+  const container=document.getElementById('waitingQueue');
+  if(!queue.length){ container.innerHTML=`<p class="text-center text-gray-400 py-4 text-sm w-full">ไม่มีใครรอคิว 🎉</p>`; return; }
+  container.innerHTML=queue.map(p=>{
+    const li=LEVEL_INFO[p.level]||LEVEL_INFO.P;
+    return `<div class="flex items-center gap-1.5 bg-amber-50 border border-amber-100 rounded-full pl-1 pr-2.5 py-1 fade-in">
+      <div class="flex items-center gap-1.5 player-token cursor-grab active:cursor-grabbing" data-player-token="${p.id}" style="touch-action:none;">
+        ${avatarHtml(p,'avatar-sm')}
+        <span class="font-medium text-sm text-gray-700">${escapeHtml(displayName(p))}</span>
+        <span class="text-[10px] px-1.5 py-0.5 rounded-full ${li.color}">${li.label}</span>
+        <span class="text-[10px] text-gray-400">${gamesTodayCount(p.id)} เกมวันนี้</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+function renderCheckin(){
+  const input=document.getElementById('checkinDateInput');
+  if(input && input.value!==checkinDate) input.value=checkinDate;
+  document.getElementById('checkinDateLabel').textContent = formatThaiDate(checkinDate) + (checkinDate===todayStr()?' (วันนี้)':'');
+  const attending=getAttendingIds(checkinDate);
+  document.getElementById('checkinCount').textContent = attending.filter(id=>players.some(p=>p.id===id)).length;
+  document.getElementById('checkinTotal').textContent = players.length;
+  const list=document.getElementById('checkinList');
+  if(!players.length){ list.innerHTML=`<p class="text-center text-gray-400 py-6 text-sm col-span-2">ยังไม่มีสมาชิก ไปเพิ่มที่แท็บ "สมาชิก" ก่อนนะครับ</p>`; }
+  else {
+    list.innerHTML = players.map(p=>{
+      const checked = attending.includes(p.id);
+      const li=LEVEL_INFO[p.level]||LEVEL_INFO.P;
+      return `<button onclick="toggleAttendance('${p.id}')" class="flex items-center gap-2 rounded-xl px-3 py-2 border-2 transition text-left ${checked?'bg-emerald-50 border-emerald-300':'bg-gray-50 border-transparent hover:border-gray-200'}">
+        ${avatarHtml(p,'avatar-sm')}
+        <span class="flex-1 min-w-0 font-medium text-sm truncate ${checked?'text-emerald-700':'text-gray-700'}">${escapeHtml(displayName(p))}</span>
+        <span class="text-[10px] px-1.5 py-0.5 rounded-full ${li.color}">${li.label}</span>
+        <span class="text-lg">${checked?'✅':'⬜'}</span>
+      </button>`;
+    }).join('');
+  }
+  const filterBtn=document.getElementById('attendanceFilterBtn');
+  if(filterBtn){
+    filterBtn.textContent = liveState.useAttendanceFilter ? '🟢 เปิดใช้งาน' : '⚪ ปิดอยู่';
+    filterBtn.className = 'shrink-0 px-4 py-2 rounded-xl font-semibold text-sm transition ' + (liveState.useAttendanceFilter ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-500');
+  }
+}
+function renderSchedCourtButtons(){
+  const wrap=document.getElementById('schedCourtBtns');
+  wrap.innerHTML=[1,2,3,4,5,6].map(n=>`<button onclick="setScheduleCourtCount(${n})" class="px-4 py-2 rounded-xl font-semibold text-sm transition ${n===liveState.scheduleCourtCount?'bg-indigo-600 text-white shadow':'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}">${n} สนาม</button>`).join('');
+}
+function renderSchedule(){
+  const container=document.getElementById('scheduleList');
+  const pendingCount=liveState.schedule.filter(m=>m.status==='pending').length;
+  document.getElementById('schedulePendingInfo').textContent = liveState.schedule.length ? `เหลือ ${pendingCount} แมตช์ จากทั้งหมด ${liveState.schedule.length} แมตช์` : 'ยังไม่ได้สร้างตาราง';
+  if(!liveState.schedule.length){ container.innerHTML=`<p class="text-center text-gray-400 py-8 text-sm">ยังไม่มีตารางการแข่งขัน</p>`; return; }
+  const rounds={};
+  liveState.schedule.forEach(m=>{ (rounds[m.round]=rounds[m.round]||[]).push(m); });
+  container.innerHTML=Object.keys(rounds).sort((a,b)=>a-b).map(r=>{
+    const used=new Set();
+    rounds[r].forEach(m=>{ if(m.status!=='cancelled'){ m.teamA.forEach(id=>used.add(id)); m.teamB.forEach(id=>used.add(id)); } });
+    const resting=players.filter(p=>!used.has(p.id));
+    const restingHtml = resting.length ? `<div class="flex flex-wrap gap-1.5 mt-1.5 mb-2">${resting.map(p=>`<span class="text-[10px] bg-amber-50 text-amber-600 border border-amber-100 px-2 py-0.5 rounded-full">🪑 ${escapeHtml(displayName(p))}</span>`).join('')}</div>` : `<p class="text-[10px] text-gray-300 mt-1 mb-2">ไม่มีคนพักในรอบนี้</p>`;
+    return `<div class="mb-4"><p class="text-xs font-bold text-gray-400">รอบที่ ${r} <span class="font-normal text-gray-300">(พัก ${resting.length} คน)</span></p>${restingHtml}<div class="space-y-1.5">${rounds[r].map(m=>scheduleRowTemplate(m)).join('')}</div></div>`;
+  }).join('');
+}
+function scheduleRowTemplate(m){
+  const nameOf=id=>displayName(players.find(p=>p.id===id));
+  const badges={ pending:'<span class="text-[10px] bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full">รอคิว</span>', playing:'<span class="text-[10px] bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-full">กำลังเล่น</span>', done:'<span class="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">จบแล้ว</span>', cancelled:'<span class="text-[10px] bg-red-50 text-red-400 px-2 py-0.5 rounded-full">ข้าม</span>' }[m.status];
+  const scoreText = (m.scoreA!==null && m.scoreA!==undefined) ? `<span class="text-xs font-bold text-gray-500 ml-1">(${m.scoreA}-${m.scoreB})</span>` : '';
+  return `<div class="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2 text-sm">
+    <div class="min-w-0 truncate"><span class="font-medium text-gray-700">${m.teamA.map(nameOf).join(' & ')}</span><span class="text-gray-300 mx-1">vs</span><span class="font-medium text-gray-700">${m.teamB.map(nameOf).join(' & ')}</span>${scoreText}</div>
+    <div class="flex items-center gap-1.5 shrink-0 ml-2">${badges}${m.status==='pending'?`<button onclick="reshuffleMatch('${m.id}')" class="text-gray-300 hover:text-indigo-500 text-xs px-1">🔀</button><button onclick="deleteScheduleMatch('${m.id}')" class="text-gray-300 hover:text-red-500 text-xs px-1">✕</button>`:''}</div>
+  </div>`;
+}
+function renderStatsDateOptions(){
+  const sel=document.getElementById('statsDateFilter');
+  const dates=[...new Set(matchHistory.map(m=>m.date))].sort((a,b)=>b.localeCompare(a));
+  const cur=sel.value || statsDateFilter;
+  sel.innerHTML = `<option value="all">📅 ทั้งหมด</option>` + dates.map(d=>`<option value="${d}">${formatThaiDate(d)}</option>`).join('');
+  sel.value = dates.includes(cur) ? cur : 'all';
+  statsDateFilter = sel.value;
+}
+function formatThaiDate(d){
+  if(!d) return '-';
+  const [y,m,day]=d.split('-');
+  const months=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  return `${parseInt(day)} ${months[parseInt(m)-1]} ${parseInt(y)+543}`;
+}
+function renderStats(){
+  const filtered = statsDateFilter==='all' ? matchHistory : matchHistory.filter(m=>m.date===statsDateFilter);
+  const tally={};
+  filtered.forEach(m=>{
+    const winner = m.scoreA>m.scoreB ? 'A' : (m.scoreB>m.scoreA ? 'B' : null);
+    (m.teamA||[]).forEach(t=>{ tally[t.id]=tally[t.id]||{name:t.name,games:0,wins:0,losses:0}; tally[t.id].games++; tally[t.id].name=t.name; if(winner==='A') tally[t.id].wins++; else if(winner==='B') tally[t.id].losses++; });
+    (m.teamB||[]).forEach(t=>{ tally[t.id]=tally[t.id]||{name:t.name,games:0,wins:0,losses:0}; tally[t.id].games++; tally[t.id].name=t.name; if(winner==='B') tally[t.id].wins++; else if(winner==='A') tally[t.id].losses++; });
+  });
+  const rows=Object.entries(tally).map(([id,v])=>({id,...v})).sort((a,b)=>b.wins-a.wins || b.games-a.games);
+  const tbody=document.getElementById('statsTableBody');
+  if(!rows.length){ tbody.innerHTML=`<tr><td colspan="5" class="text-center text-gray-400 py-6 text-sm">ไม่มีข้อมูลในช่วงที่เลือก</td></tr>`; }
+  else {
+    tbody.innerHTML=rows.map(r=>{
+      const p=players.find(pl=>pl.id===r.id);
+      const total=r.wins+r.losses; const rate=total>0?Math.round(r.wins/total*100):0;
+      return `<tr class="border-b border-gray-50">
+        <td class="py-2 px-2"><div class="flex items-center gap-2">${avatarHtml(p,'avatar-sm')}<span class="font-medium text-gray-700 truncate">${escapeHtml(r.name)}</span></div></td>
+        <td class="py-2 px-2 text-center text-gray-500">${r.games}</td>
+        <td class="py-2 px-2 text-center text-emerald-500 font-semibold">${r.wins}</td>
+        <td class="py-2 px-2 text-center text-red-400 font-semibold">${r.losses}</td>
+        <td class="py-2 px-2 text-center text-gray-500">${rate}%</td>
+      </tr>`;
+    }).join('');
+  }
+  const historyContainer=document.getElementById('matchHistoryList');
+  if(!filtered.length){ historyContainer.innerHTML=`<p class="text-center text-gray-400 py-6 text-sm">ไม่มีประวัติการแข่งขันในช่วงที่เลือก</p>`; return; }
+  historyContainer.innerHTML=filtered.map(h=>`
+    <div class="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2 text-sm">
+      <div class="min-w-0 truncate">
+        <span class="text-[10px] text-gray-400">${formatThaiDate(h.date)} ${h.time||''}${h.court?(' · สนาม '+h.court):''}${h.mode==='singles'?' · เดี่ยว':''}</span><br/>
+        <span class="font-medium text-gray-700">${(h.teamA||[]).map(t=>t.name).join(' & ')}</span>
+        <span class="text-gray-300 mx-1">vs</span>
+        <span class="font-medium text-gray-700">${(h.teamB||[]).map(t=>t.name).join(' & ')}</span>
+      </div>
+      <div class="flex items-center gap-2 shrink-0 ml-2">
+        <span class="font-bold text-gray-700">${h.scoreA} - ${h.scoreB}</span>
+        <button onclick="openEditMatch('${h.id}')" class="text-gray-300 hover:text-indigo-500 text-xs">✏️</button>
+        <button onclick="deleteMatchRecord('${h.id}')" class="text-gray-300 hover:text-red-500 text-xs">🗑</button>
+      </div>
+    </div>`).join('');
+}
+render();
 </script>
 </body>
 </html>
