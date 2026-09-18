@@ -29,6 +29,7 @@
 
   <div class="flex flex-wrap bg-white rounded-2xl shadow-sm p-1.5 mb-5 border border-gray-100 gap-1">
     <button id="navbtn-main" onclick="switchTab('main')" class="flex-1 min-w-[80px] py-2 rounded-xl text-sm font-semibold transition bg-indigo-600 text-white">🏟️ หน้าหลัก</button>
+    <button id="navbtn-checkin" onclick="switchTab('checkin')" class="flex-1 min-w-[80px] py-2 rounded-xl text-sm font-semibold transition text-gray-500">📅 เช็คชื่อ</button>
     <button id="navbtn-members" onclick="switchTab('members')" class="flex-1 min-w-[80px] py-2 rounded-xl text-sm font-semibold transition text-gray-500">👤 สมาชิก</button>
     <button id="navbtn-schedule" onclick="switchTab('schedule')" class="flex-1 min-w-[80px] py-2 rounded-xl text-sm font-semibold transition text-gray-500">📋 จัดตาราง</button>
     <button id="navbtn-stats" onclick="switchTab('stats')" class="flex-1 min-w-[80px] py-2 rounded-xl text-sm font-semibold transition text-gray-500">📊 สถิติ</button>
@@ -36,10 +37,14 @@
 
   <!-- TAB MAIN -->
   <div id="tab-main">
-    <div class="grid grid-cols-3 gap-2 sm:gap-3 mb-3">
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-3">
       <div class="bg-white rounded-2xl shadow-sm p-3 text-center border border-gray-100">
         <p class="text-2xl font-bold text-indigo-600" id="statTotal">0</p>
         <p class="text-xs text-gray-400 mt-0.5">สมาชิกทั้งหมด</p>
+      </div>
+      <div class="bg-white rounded-2xl shadow-sm p-3 text-center border border-gray-100">
+        <p class="text-2xl font-bold text-purple-500" id="statCheckedIn">0</p>
+        <p class="text-xs text-gray-400 mt-0.5">เช็คชื่อวันนี้</p>
       </div>
       <div class="bg-white rounded-2xl shadow-sm p-3 text-center border border-gray-100">
         <p class="text-2xl font-bold text-emerald-500" id="statPlaying">0</p>
@@ -58,7 +63,7 @@
         <div class="bg-white rounded-2xl shadow-md p-4 border border-gray-100">
           <div class="flex items-center justify-between mb-2">
             <h2 class="font-bold text-gray-700 flex items-center gap-2">👥 สมาชิกก๊วน (<span id="memberCount">0</span>)</h2>
-            <button onclick="switchTab('members')" class="text-xs text-indigo-500 hover:text-indigo-700">+ จัดการสมาชิก</button>
+            <button onclick="switchTab('checkin')" class="text-xs text-indigo-500 hover:text-indigo-700">📅 เช็คชื่อ</button>
           </div>
           <div id="memberList" data-dropzone="queue" class="space-y-1.5 max-h-72 overflow-y-auto pr-1"></div>
         </div>
@@ -95,9 +100,41 @@
         </div>
         <div class="bg-white rounded-2xl shadow-md p-4 border border-gray-100">
           <h2 class="font-bold text-gray-700 mb-1">🕒 คิวรอ (<span id="waitingCount">0</span> คน)</h2>
-          <p class="text-[10px] text-gray-300 mb-2">ลากผู้เล่นจากสนามมาปล่อยตรงนี้เพื่อพักคิวได้</p>
+          <p class="text-[10px] text-gray-300 mb-2" id="queueHint">ลากผู้เล่นจากสนามมาปล่อยตรงนี้เพื่อพักคิวได้</p>
           <div id="waitingQueue" data-dropzone="queue" class="flex flex-wrap gap-2 min-h-[50px] rounded-xl"></div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB CHECKIN -->
+  <div id="tab-checkin" class="hidden space-y-5">
+    <div class="bg-white rounded-2xl shadow-md p-4 border border-gray-100">
+      <h2 class="font-bold text-gray-700 mb-1">📅 เช็คชื่อสมาชิกที่จะมาก๊วน</h2>
+      <p class="text-xs text-gray-400 mb-4">เลือกวันที่ แล้วติ๊กเลือกสมาชิกที่จะมาร่วมก๊วนวันนั้น ระบบ sync ให้ทุกคนเห็นตรงกัน</p>
+      <div class="flex items-center gap-2 mb-3 flex-wrap">
+        <button onclick="shiftCheckinDate(-1)" class="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold">‹</button>
+        <input id="checkinDateInput" type="date" onchange="onCheckinDateChange(this.value)" class="px-3 py-2 rounded-xl border border-gray-200 text-sm" />
+        <button onclick="shiftCheckinDate(1)" class="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold">›</button>
+        <button onclick="goToday()" class="px-3 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-xs font-semibold">วันนี้</button>
+        <span class="ml-auto text-sm font-semibold text-gray-600" id="checkinDateLabel"></span>
+      </div>
+      <div class="flex flex-wrap gap-2 mb-3">
+        <button onclick="setAllAttendance(true)" class="text-xs px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 font-medium">✅ เลือกทั้งหมด</button>
+        <button onclick="setAllAttendance(false)" class="text-xs px-3 py-1.5 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 font-medium">✕ ไม่เลือกเลย</button>
+        <button onclick="copyFromLatestAttendance()" class="text-xs px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-600 hover:bg-indigo-100 font-medium">📋 คัดลอกจากครั้งล่าสุด</button>
+      </div>
+      <p class="text-sm font-semibold text-gray-600 mb-2">ยืนยันมาก๊วนแล้ว <span id="checkinCount" class="text-emerald-500">0</span> / <span id="checkinTotal">0</span> คน</p>
+      <div id="checkinList" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-md p-4 border border-gray-100">
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <h2 class="font-bold text-gray-700">🔒 ใช้รายชื่อเช็คชื่อกรองในหน้าหลัก</h2>
+          <p class="text-xs text-gray-400 mt-0.5">เปิดไว้ ระบบจะจัดคู่/แสดงคิวรอ เฉพาะคนที่เช็คชื่อ "วันนี้" เท่านั้น (ถ้ายังไม่มีใครเช็คชื่อเลย จะใช้สมาชิกทั้งหมดแทนอัตโนมัติ)</p>
+        </div>
+        <button onclick="toggleAttendanceFilter()" id="attendanceFilterBtn" class="shrink-0 px-4 py-2 rounded-xl font-semibold text-sm transition"></button>
       </div>
     </div>
   </div>
@@ -138,7 +175,7 @@
   <div id="tab-schedule" class="hidden space-y-5">
     <div class="bg-white rounded-2xl shadow-md p-4 border border-gray-100">
       <h2 class="font-bold text-gray-700 mb-1">📋 จัดตารางแข่งขันล่วงหน้า</h2>
-      <p class="text-xs text-gray-400 mb-4">ระบบเกลี่ยรอบเล่น/พักให้เท่ากัน (sync ให้ทุกคนเห็นตารางเดียวกัน)</p>
+      <p class="text-xs text-gray-400 mb-4">ระบบเกลี่ยรอบเล่น/พักให้เท่ากัน (ใช้เฉพาะคนเช็คชื่อวันนี้ ถ้าเปิดสวิตช์กรองไว้)</p>
       <div class="mb-3">
         <p class="text-sm font-semibold text-gray-600 mb-2">🏟️ จำนวนสนามจำลอง</p>
         <div class="flex flex-wrap gap-2" id="schedCourtBtns"></div>
@@ -266,7 +303,7 @@
 
 <script>
 // ===================== FIREBASE CONFIG =====================
-// 🔴 แก้ตรงนี้เป็นค่าของโปรเจกต์ Firebase ของคุณเอง
+// 🔴 ใส่ค่าเดิมที่คุณตั้งไว้จากขั้นตอนก่อนหน้า (อย่าลบทิ้ง)
 const firebaseConfig = {
   apiKey: "AIzaSyBPYr3CiV8CRlo66xQUYcjkaqvgSzcHxkY",
   authDomain: "badminton-app-dew.firebaseapp.com",
@@ -278,10 +315,12 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// ===================== STATE (MIRROR จาก Firestore) =====================
+// ===================== STATE =====================
 let players = [];
 let liveState = defaultLiveState();
 let matchHistory = [];
+let attendanceData = {}; // { 'YYYY-MM-DD': { playerIds: [...] } }
+let checkinDate = todayStr();
 let editingPlayerId = null;
 let pendingPhotoDataUrl = null;
 let removePhotoFlag = false;
@@ -301,6 +340,7 @@ const LEVEL_INFO = {
 function defaultLiveState() {
   return {
     courtCount: 2, matchMode: 'doubles', gamePoint: 21, scheduleCourtCount: 2,
+    useAttendanceFilter: false,
     courts: [1,2].map(id=>({id, teamA:[null,null], teamB:[null,null], status:'empty', matchId:null})),
     schedule: [], partnerHistory: {}, singlesHistory: {},
   };
@@ -326,9 +366,52 @@ function showToast(msg){
 }
 function closeModal(id){ const el=document.getElementById(id); el.classList.add('hidden'); el.classList.remove('flex'); }
 
+// ===================== ATTENDANCE HELPERS =====================
+function getAttendingIds(date){ return (attendanceData[date] && attendanceData[date].playerIds) || []; }
+function getEligiblePlayers(){
+  if(!liveState.useAttendanceFilter) return players;
+  const ids = getAttendingIds(todayStr());
+  if(!ids.length) return players; // ยังไม่มีใครเช็คชื่อ ใช้สมาชิกทั้งหมดแทน กันเว็บใช้งานไม่ได้
+  return players.filter(p=>ids.includes(p.id));
+}
+async function toggleAttendance(playerId){
+  const date=checkinDate;
+  const current=getAttendingIds(date);
+  const next = current.includes(playerId) ? current.filter(id=>id!==playerId) : [...current, playerId];
+  try { await db.collection('attendance').doc(date).set({ playerIds: next, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }); }
+  catch(e){ showToast('บันทึกไม่สำเร็จ: '+e.message); }
+}
+async function setAllAttendance(all){
+  const date=checkinDate;
+  const ids = all ? players.map(p=>p.id) : [];
+  try {
+    await db.collection('attendance').doc(date).set({ playerIds: ids, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    showToast(all?'เลือกสมาชิกทั้งหมดแล้ว':'ล้างรายชื่อแล้ว');
+  } catch(e){ showToast('บันทึกไม่สำเร็จ: '+e.message); }
+}
+async function copyFromLatestAttendance(){
+  const dates=Object.keys(attendanceData).filter(d=>d!==checkinDate && attendanceData[d].playerIds && attendanceData[d].playerIds.length).sort((a,b)=>b.localeCompare(a));
+  if(!dates.length){ showToast('ยังไม่มีประวัติการเช็คชื่อให้คัดลอก'); return; }
+  const src=dates[0];
+  const ids=getAttendingIds(src).filter(id=>players.some(p=>p.id===id));
+  try {
+    await db.collection('attendance').doc(checkinDate).set({ playerIds: ids, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    showToast(`คัดลอกรายชื่อจากวันที่ ${formatThaiDate(src)} แล้ว (${ids.length} คน)`);
+  } catch(e){ showToast('คัดลอกไม่สำเร็จ: '+e.message); }
+}
+function shiftCheckinDate(delta){
+  const d=new Date(checkinDate+'T00:00:00');
+  d.setDate(d.getDate()+delta);
+  checkinDate=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  renderCheckin();
+}
+function onCheckinDateChange(v){ checkinDate=v||todayStr(); renderCheckin(); }
+function goToday(){ checkinDate=todayStr(); renderCheckin(); }
+function toggleAttendanceFilter(){ const next=clone(liveState); next.useAttendanceFilter=!next.useAttendanceFilter; pushLiveState(next); }
+
 // ===================== FIRESTORE LISTENERS (REAL-TIME) =====================
 let listenersReady = 0;
-function markReady(){ listenersReady++; if(listenersReady>=3) document.getElementById('syncStatus').textContent='🟢 เชื่อมต่อฐานข้อมูลแล้ว ข้อมูล sync แบบเรียลไทม์'; }
+function markReady(){ listenersReady++; if(listenersReady>=4) document.getElementById('syncStatus').textContent='🟢 เชื่อมต่อฐานข้อมูลแล้ว ข้อมูล sync แบบเรียลไทม์'; }
 
 db.collection('players').orderBy('createdAt','asc').onSnapshot(snap=>{
   players = snap.docs.map(d=>({id:d.id, ...d.data()}));
@@ -346,6 +429,12 @@ db.collection('matchHistory').orderBy('createdAt','desc').onSnapshot(snap=>{
   markReady(); render();
 }, err=>{ document.getElementById('syncStatus').textContent='🔴 เชื่อมต่อไม่สำเร็จ: '+err.message; });
 
+db.collection('attendance').onSnapshot(snap=>{
+  attendanceData = {};
+  snap.docs.forEach(d=>{ attendanceData[d.id]=d.data(); });
+  markReady(); render();
+}, err=>{ document.getElementById('syncStatus').textContent='🔴 เชื่อมต่อไม่สำเร็จ: '+err.message; });
+
 function pushLiveState(next){
   liveState = next;
   db.collection('liveState').doc('main').set(next).catch(e=>showToast('บันทึกไม่สำเร็จ: '+e.message));
@@ -354,7 +443,7 @@ function pushLiveState(next){
 
 // ===================== TAB SWITCH =====================
 function switchTab(tab){
-  ['main','members','schedule','stats'].forEach(t=>{
+  ['main','checkin','members','schedule','stats'].forEach(t=>{
     document.getElementById('tab-'+t).classList.toggle('hidden', t!==tab);
     const btn=document.getElementById('navbtn-'+t);
     btn.classList.toggle('bg-indigo-600', t===tab);
@@ -482,7 +571,8 @@ function gamesTodayCount(playerId){
 }
 function getSortedQueue(state){
   const playing=computePlayingIds(state);
-  const waiting=players.filter(p=>!playing.has(p.id));
+  const eligible=getEligiblePlayers();
+  const waiting=eligible.filter(p=>!playing.has(p.id));
   shuffle(waiting);
   waiting.sort((a,b)=>gamesTodayCount(a.id)-gamesTodayCount(b.id));
   return waiting;
@@ -569,7 +659,7 @@ function autoArrange(){
   if(!empty.length){ showToast('ไม่มีสนามว่างให้จัดคู่'); return; }
   let filled=0;
   empty.forEach(c=>{ if(fillCourt(c,next)) filled++; });
-  if(!filled){ showToast('ผู้เล่นไม่พอสำหรับจัดคู่ลงสนาม'); return; }
+  if(!filled){ showToast('ผู้เล่นไม่พอสำหรับจัดคู่ลงสนาม (ลองเช็คว่ามีคนเช็คชื่อวันนี้ครบหรือยัง)'); return; }
   pushLiveState(next);
   showToast(`จัดคู่ลงสนามสำเร็จ ${filled} สนาม 🎉`);
 }
@@ -641,7 +731,7 @@ function openSwapModal(courtId, team, idx){
   swapCtx={courtId,team,idx};
   document.getElementById('swapOldName').textContent=displayName(players.find(p=>p.id===oldId));
   const playing=computePlayingIds(liveState);
-  const waiting=players.filter(p=>!playing.has(p.id));
+  const waiting=getEligiblePlayers().filter(p=>!playing.has(p.id));
   const list=document.getElementById('swapPlayerList');
   if(!waiting.length){ list.innerHTML=`<p class="text-center text-gray-400 text-sm py-4">ไม่มีผู้เล่นว่างสำหรับเปลี่ยนตัว 😢</p>`; }
   else {
@@ -756,9 +846,10 @@ function generateSchedule(){
   const requested=parseInt(document.getElementById('scheduleCount').value);
   if(!requested||requested<1){ showToast('กรุณาระบุจำนวนแมตช์'); return; }
   const need=requiredCount(liveState.matchMode);
-  if(players.length<need){ showToast(`ต้องมีสมาชิกอย่างน้อย ${need} คน`); return; }
+  const eligible=getEligiblePlayers();
+  if(eligible.length<need){ showToast(`ผู้เล่นที่พร้อมลงเล่นมีไม่พอ (ต้องการอย่างน้อย ${need} คน)`); return; }
   const next=clone(liveState);
-  const temp=players.map(p=>({id:p.id, games: gamesTodayCount(p.id)}));
+  const temp=eligible.map(p=>({id:p.id, games: gamesTodayCount(p.id)}));
   const tempHist = clone(next.matchMode==='doubles'?next.partnerHistory:next.singlesHistory);
   const newSchedule=[]; let round=1, generated=0, safety=0;
   while(generated<requested && safety<requested*4+30){
@@ -890,20 +981,30 @@ function render(){
   renderSchedule();
   renderStatsDateOptions();
   renderStats();
+  renderCheckin();
 }
 
 function renderStatsBar(){
   const playing=computePlayingIds(liveState);
   document.getElementById('statTotal').textContent=players.length;
+  document.getElementById('statCheckedIn').textContent=getAttendingIds(todayStr()).filter(id=>players.some(p=>p.id===id)).length;
   document.getElementById('statPlaying').textContent=playing.size;
-  document.getElementById('statWaiting').textContent=Math.max(players.length-playing.size,0);
+  document.getElementById('statWaiting').textContent=Math.max(getEligiblePlayers().length-playing.size,0);
   document.getElementById('memberCount').textContent=players.length;
   document.getElementById('memberListCount').textContent=players.length;
 }
 function renderModeBanner(){
   const pending=liveState.schedule.filter(m=>m.status==='pending').length;
   const modeText=liveState.matchMode==='singles'?'🧍 โหมดเดี่ยว (1v1)':'👥 โหมดคู่ (2v2)';
-  document.getElementById('modeBanner').textContent=(pending>0?`📋 ใช้ตารางล่วงหน้า (เหลือ ${pending}) · `:'🔀 โหมดสุ่มสด · ')+modeText;
+  const filterText = liveState.useAttendanceFilter ? ' · 🔒 กรองเฉพาะคนเช็คชื่อวันนี้' : '';
+  document.getElementById('modeBanner').textContent=(pending>0?`📋 ใช้ตารางล่วงหน้า (เหลือ ${pending}) · `:'🔀 โหมดสุ่มสด · ')+modeText+filterText;
+  const hint=document.getElementById('queueHint');
+  if(liveState.useAttendanceFilter){
+    const notCheckedIn = players.length - getEligiblePlayers().length;
+    hint.textContent = notCheckedIn>0 ? `ลากผู้เล่นมาปล่อยเพื่อพักคิวได้ · มี ${notCheckedIn} คนยังไม่เช็คชื่อวันนี้ (ไม่แสดงในคิว)` : 'ลากผู้เล่นจากสนามมาปล่อยตรงนี้เพื่อพักคิวได้';
+  } else {
+    hint.textContent='ลากผู้เล่นจากสนามมาปล่อยตรงนี้เพื่อพักคิวได้';
+  }
 }
 function renderMatchModeButtons(){
   const wrap=document.getElementById('matchModeBtns');
@@ -918,16 +1019,20 @@ function renderCourtButtons(){
 }
 function renderMembersOnMain(){
   const container=document.getElementById('memberList');
-  if(!players.length){ container.innerHTML=`<p class="text-center text-gray-400 py-4 text-sm">ยังไม่มีสมาชิก กดปุ่ม "+ จัดการสมาชิก" เพื่อเพิ่ม</p>`; return; }
+  if(!players.length){ container.innerHTML=`<p class="text-center text-gray-400 py-4 text-sm">ยังไม่มีสมาชิก ไปเพิ่มที่แท็บ "สมาชิก"</p>`; return; }
   const playing=computePlayingIds(liveState);
+  const todayAttending=getAttendingIds(todayStr());
   container.innerHTML=players.map(p=>{
     const li=LEVEL_INFO[p.level]||LEVEL_INFO.P;
     const isPlaying=playing.has(p.id);
+    const attended=todayAttending.includes(p.id);
+    const attendBadge = attended ? '<span class="text-[11px]" title="เช็คชื่อมาก๊วนวันนี้">✅</span>' : '<span class="text-[11px] opacity-40" title="ยังไม่เช็คชื่อวันนี้">⬜</span>';
     return `<div class="flex items-center justify-between bg-gray-50 hover:bg-gray-100 rounded-xl px-2 py-1.5 transition fade-in">
       <div class="flex items-center gap-2 min-w-0 player-token cursor-grab active:cursor-grabbing" data-player-token="${p.id}" style="touch-action:none;">
         ${avatarHtml(p,'avatar-sm')}
-        <span class="font-medium text-gray-800 text-sm truncate max-w-[90px]">${escapeHtml(displayName(p))}</span>
+        <span class="font-medium text-gray-800 text-sm truncate max-w-[80px]">${escapeHtml(displayName(p))}</span>
         <span class="text-[10px] px-1.5 py-0.5 rounded-full whitespace-nowrap ${li.color}">${li.label}</span>
+        ${attendBadge}
       </div>
       <span class="text-[11px] ${isPlaying?'text-emerald-500':'text-gray-400'} whitespace-nowrap">${isPlaying?'🟢 เล่นอยู่':'⏳ รอ'}</span>
     </div>`;
@@ -1005,7 +1110,7 @@ function courtCardTemplate(c){
 }
 function renderQueue(){
   const playing=computePlayingIds(liveState);
-  const queue=players.filter(p=>!playing.has(p.id)).sort((a,b)=>gamesTodayCount(a.id)-gamesTodayCount(b.id) || displayName(a).localeCompare(displayName(b),'th'));
+  const queue=getEligiblePlayers().filter(p=>!playing.has(p.id)).sort((a,b)=>gamesTodayCount(a.id)-gamesTodayCount(b.id) || displayName(a).localeCompare(displayName(b),'th'));
   document.getElementById('waitingCount').textContent=queue.length;
   const container=document.getElementById('waitingQueue');
   if(!queue.length){ container.innerHTML=`<p class="text-center text-gray-400 py-4 text-sm w-full">ไม่มีใครรอคิว 🎉</p>`; return; }
@@ -1020,6 +1125,33 @@ function renderQueue(){
       </div>
     </div>`;
   }).join('');
+}
+function renderCheckin(){
+  const input=document.getElementById('checkinDateInput');
+  if(input && input.value!==checkinDate) input.value=checkinDate;
+  document.getElementById('checkinDateLabel').textContent = formatThaiDate(checkinDate) + (checkinDate===todayStr()?' (วันนี้)':'');
+  const attending=getAttendingIds(checkinDate);
+  document.getElementById('checkinCount').textContent = attending.filter(id=>players.some(p=>p.id===id)).length;
+  document.getElementById('checkinTotal').textContent = players.length;
+  const list=document.getElementById('checkinList');
+  if(!players.length){ list.innerHTML=`<p class="text-center text-gray-400 py-6 text-sm col-span-2">ยังไม่มีสมาชิก ไปเพิ่มที่แท็บ "สมาชิก" ก่อนนะครับ</p>`; }
+  else {
+    list.innerHTML = players.map(p=>{
+      const checked = attending.includes(p.id);
+      const li=LEVEL_INFO[p.level]||LEVEL_INFO.P;
+      return `<button onclick="toggleAttendance('${p.id}')" class="flex items-center gap-2 rounded-xl px-3 py-2 border-2 transition text-left ${checked?'bg-emerald-50 border-emerald-300':'bg-gray-50 border-transparent hover:border-gray-200'}">
+        ${avatarHtml(p,'avatar-sm')}
+        <span class="flex-1 min-w-0 font-medium text-sm truncate ${checked?'text-emerald-700':'text-gray-700'}">${escapeHtml(displayName(p))}</span>
+        <span class="text-[10px] px-1.5 py-0.5 rounded-full ${li.color}">${li.label}</span>
+        <span class="text-lg">${checked?'✅':'⬜'}</span>
+      </button>`;
+    }).join('');
+  }
+  const filterBtn=document.getElementById('attendanceFilterBtn');
+  if(filterBtn){
+    filterBtn.textContent = liveState.useAttendanceFilter ? '🟢 เปิดใช้งาน' : '⚪ ปิดอยู่';
+    filterBtn.className = 'shrink-0 px-4 py-2 rounded-xl font-semibold text-sm transition ' + (liveState.useAttendanceFilter ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-500');
+  }
 }
 function renderSchedCourtButtons(){
   const wrap=document.getElementById('schedCourtBtns');
