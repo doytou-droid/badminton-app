@@ -7,6 +7,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
   *{font-family:'Kanit',sans-serif;-webkit-tap-highlight-color:transparent;}
@@ -17,15 +18,31 @@
 </head>
 <body class="bg-slate-50 min-h-screen">
 
+<!-- ========== LOGIN GATE ========== -->
+<div id="loginGate" class="fixed inset-0 z-[500] bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 flex items-center justify-center p-5">
+  <div class="bg-white rounded-3xl p-7 w-full max-w-sm shadow-2xl text-center">
+    <div class="text-5xl mb-2">🏸</div>
+    <h1 class="text-xl font-bold text-slate-800">ก๊วนแบดมินตัน</h1>
+    <p class="text-xs text-slate-400 mt-1 mb-6">เข้าสู่ระบบด้วยบัญชี Google เพื่อใช้งาน</p>
+    <button onclick="loginGoogle()" class="w-full py-3 rounded-2xl bg-white border-2 border-slate-200 text-slate-700 font-semibold text-sm flex items-center justify-center gap-2 active:scale-95 transition">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.7 1.22 9.2 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 3-2.26 5.54-4.78 7.24l7.73 6c4.51-4.18 7.21-10.36 7.21-17.71z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24s.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      เข้าสู่ระบบด้วย Google
+    </button>
+    <p id="loginErr" class="text-[11px] text-rose-500 mt-3"></p>
+    <p class="text-[10px] text-slate-300 mt-5">ผู้ใช้คนแรกที่เข้าระบบจะได้สิทธิ์ผู้ดูแล (Admin) อัตโนมัติ</p>
+  </div>
+</div>
+
 <!-- ========== HEADER ========== -->
 <header class="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-slate-100">
-  <div class="max-w-4xl mx-auto px-3 py-3 flex items-center gap-3">
-    <button id="backBtn" onclick="go('home')" class="hidden w-9 h-9 rounded-xl bg-slate-100 text-slate-600 font-bold">‹</button>
+  <div class="max-w-4xl mx-auto px-3 py-3 flex items-center gap-2">
+    <button id="backBtn" onclick="go('home')" class="hidden w-9 h-9 rounded-xl bg-slate-100 text-slate-600 font-bold shrink-0">‹</button>
     <div class="flex-1 min-w-0">
-      <h1 id="pageTitle" class="font-bold text-slate-800 truncate">🏸 ก๊วนแบดมินตัน</h1>
+      <h1 id="pageTitle" class="font-bold text-slate-800 truncate text-sm sm:text-base">🏸 ก๊วนแบดมินตัน</h1>
       <p id="syncStatus" class="text-[10px] text-slate-400 truncate">กำลังเชื่อมต่อ…</p>
     </div>
-    <button onclick="go('scoreboard')" class="px-3 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-orange-500 text-white text-xs font-bold shadow">📺 สกอร์บอร์ด</button>
+    <button onclick="go('scoreboard')" class="px-2.5 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-orange-500 text-white text-[11px] font-bold shadow shrink-0">📺</button>
+    <button onclick="go('account')" id="userChip" class="flex items-center gap-1.5 pl-1 pr-2 py-1 rounded-full bg-slate-100 shrink-0"></button>
   </div>
 </header>
 
@@ -33,27 +50,39 @@
 
 <!-- ========== HOME ========== -->
 <section id="page-home">
-  <div class="rounded-3xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white p-5 mb-4 shadow-lg">
-    <p class="text-xs opacity-80">ก๊วนของเรา</p>
-    <p class="text-2xl font-bold" id="homeTodayLabel">วันนี้</p>
-    <p class="text-xs opacity-75 mt-0.5">🕐 <span id="homeClock">--:--</span> น.</p>
-    <div class="grid grid-cols-3 gap-2 mt-4">
-      <div class="bg-white/15 rounded-2xl p-2 text-center"><p class="text-xl font-bold" id="hStatMembers">0</p><p class="text-[10px] opacity-80">สมาชิก</p></div>
-      <div class="bg-white/15 rounded-2xl p-2 text-center"><p class="text-xl font-bold" id="hStatJoin">0</p><p class="text-[10px] opacity-80">เข้าร่วมวันนี้</p></div>
-      <div class="bg-white/15 rounded-2xl p-2 text-center"><p class="text-xl font-bold" id="hStatMatch">0</p><p class="text-[10px] opacity-80">แมตช์วันนี้</p></div>
+  <!-- นัดหมายเด่นบนสุด -->
+  <div class="rounded-3xl bg-gradient-to-br from-indigo-600 to-violet-700 text-white p-5 mb-4 shadow-xl">
+    <div class="flex items-center justify-between mb-2">
+      <p class="text-xs opacity-80 font-semibold">📣 นัดตีที่กำลังจะถึง</p>
+      <button onclick="go('sessions')" class="text-[11px] bg-white/20 px-2.5 py-1 rounded-full">จัดการนัด ›</button>
     </div>
+    <div id="heroSession"></div>
+  </div>
+
+  <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm mb-4">
+    <div class="flex items-center justify-between mb-2">
+      <p class="font-bold text-slate-700 text-sm">🗓️ นัดอื่นๆ</p>
+      <span class="text-[11px] text-slate-400" id="otherSesCount"></span>
+    </div>
+    <div id="homeOtherSessions" class="space-y-2"></div>
+  </div>
+
+  <div class="grid grid-cols-3 gap-2 mb-4">
+    <div class="bg-white rounded-2xl p-3 text-center border border-slate-100 shadow-sm"><p class="text-xl font-bold text-indigo-600" id="hStatMembers">0</p><p class="text-[10px] text-slate-400">สมาชิก</p></div>
+    <div class="bg-white rounded-2xl p-3 text-center border border-slate-100 shadow-sm"><p class="text-xl font-bold text-emerald-500" id="hStatJoin">0</p><p class="text-[10px] text-slate-400">เข้าร่วมวันนี้</p></div>
+    <div class="bg-white rounded-2xl p-3 text-center border border-slate-100 shadow-sm"><p class="text-xl font-bold text-amber-500" id="hStatMatch">0</p><p class="text-[10px] text-slate-400">แมตช์วันนี้</p></div>
   </div>
 
   <div class="grid grid-cols-3 sm:grid-cols-4 gap-3">
+    <button onclick="go('sessions')" class="bg-white rounded-2xl p-3 shadow-sm border border-slate-100 active:scale-95 transition">
+      <div class="w-12 h-12 mx-auto rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center text-2xl">📅</div>
+      <p class="text-xs font-semibold text-slate-700 mt-2">นัดหมาย</p></button>
     <button onclick="go('courts')" class="bg-white rounded-2xl p-3 shadow-sm border border-slate-100 active:scale-95 transition">
       <div class="w-12 h-12 mx-auto rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-2xl">🏟️</div>
       <p class="text-xs font-semibold text-slate-700 mt-2">จัดสนาม</p></button>
     <button onclick="go('scoreboard')" class="bg-white rounded-2xl p-3 shadow-sm border border-slate-100 active:scale-95 transition">
       <div class="w-12 h-12 mx-auto rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center text-2xl">📺</div>
       <p class="text-xs font-semibold text-slate-700 mt-2">สกอร์บอร์ด</p></button>
-    <button onclick="go('sessions')" class="bg-white rounded-2xl p-3 shadow-sm border border-slate-100 active:scale-95 transition">
-      <div class="w-12 h-12 mx-auto rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center text-2xl">📅</div>
-      <p class="text-xs font-semibold text-slate-700 mt-2">นัดหมาย</p></button>
     <button onclick="go('members')" class="bg-white rounded-2xl p-3 shadow-sm border border-slate-100 active:scale-95 transition">
       <div class="w-12 h-12 mx-auto rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-2xl">👤</div>
       <p class="text-xs font-semibold text-slate-700 mt-2">สมาชิก</p></button>
@@ -66,14 +95,9 @@
     <button onclick="go('history')" class="bg-white rounded-2xl p-3 shadow-sm border border-slate-100 active:scale-95 transition">
       <div class="w-12 h-12 mx-auto rounded-2xl bg-teal-100 text-teal-600 flex items-center justify-center text-2xl">📜</div>
       <p class="text-xs font-semibold text-slate-700 mt-2">ประวัติ</p></button>
-    <button onclick="openFsFromQuick()" class="bg-white rounded-2xl p-3 shadow-sm border border-slate-100 active:scale-95 transition">
-      <div class="w-12 h-12 mx-auto rounded-2xl bg-slate-800 text-white flex items-center justify-center text-2xl">⛶</div>
-      <p class="text-xs font-semibold text-slate-700 mt-2">จอเต็ม</p></button>
-  </div>
-
-  <div class="mt-4 bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
-    <p class="font-bold text-slate-700 text-sm mb-2">📣 นัดล่าสุด</p>
-    <div id="homeSession" class="text-sm text-slate-500">—</div>
+    <button onclick="go('account')" class="bg-white rounded-2xl p-3 shadow-sm border border-slate-100 active:scale-95 transition">
+      <div class="w-12 h-12 mx-auto rounded-2xl bg-slate-800 text-white flex items-center justify-center text-2xl">⚙️</div>
+      <p class="text-xs font-semibold text-slate-700 mt-2">ตั้งค่า</p></button>
   </div>
 </section>
 
@@ -81,30 +105,19 @@
 <section id="page-courts" class="hidden space-y-4">
   <button onclick="go('home')" class="w-full py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-600 font-semibold text-sm shadow-sm">🏠 กลับหน้าหลัก</button>
   <div id="courtSessionBanner" class="hidden rounded-2xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-700"></div>
-
   <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm space-y-3">
-    <div>
-      <p class="text-sm font-semibold text-slate-600 mb-2">🎮 โหมด</p>
+    <div><p class="text-sm font-semibold text-slate-600 mb-2">🎮 โหมด</p>
       <div class="flex gap-2">
         <button onclick="setMode('doubles')" id="mode-doubles" class="flex-1 py-2 rounded-xl text-sm font-semibold">👥 คู่ 2v2</button>
         <button onclick="setMode('singles')" id="mode-singles" class="flex-1 py-2 rounded-xl text-sm font-semibold">🧍 เดี่ยว 1v1</button>
-      </div>
-    </div>
-    <div>
-      <p class="text-sm font-semibold text-slate-600 mb-2">🏟️ จำนวนสนาม</p>
-      <div class="flex gap-2" id="courtCountBtns"></div>
-    </div>
-    <div>
-      <p class="text-sm font-semibold text-slate-600 mb-2">🎯 แต้มจบเกม</p>
+      </div></div>
+    <div><p class="text-sm font-semibold text-slate-600 mb-2">🏟️ จำนวนสนาม</p><div class="flex gap-2" id="courtCountBtns"></div></div>
+    <div><p class="text-sm font-semibold text-slate-600 mb-2">🎯 แต้มจบเกม</p>
       <select onchange="setGamePoint(this.value)" id="gamePointSel" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm bg-white">
-        <option value="11">11 แต้ม</option><option value="15">15 แต้ม</option><option value="21">21 แต้ม</option><option value="25">25 แต้ม</option>
-      </select>
-    </div>
+        <option value="11">11 แต้ม</option><option value="15">15 แต้ม</option><option value="21">21 แต้ม</option><option value="25">25 แต้ม</option></select></div>
     <button onclick="autoArrange()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold py-3 rounded-2xl shadow">🔀 จัดคู่อัตโนมัติ</button>
   </div>
-
   <div id="courtsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
-
   <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
     <p class="font-bold text-slate-700 text-sm mb-2">🕒 คิวรอ (<span id="waitCount">0</span>)</p>
     <div id="waitList" class="flex flex-wrap gap-2"></div>
@@ -114,38 +127,28 @@
 <!-- ========== SCOREBOARD ========== -->
 <section id="page-scoreboard" class="hidden space-y-4">
   <button onclick="go('home')" class="w-full py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-600 font-semibold text-sm shadow-sm">🏠 กลับหน้าหลัก</button>
-
   <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
     <p class="text-sm font-semibold text-slate-600 mb-2">เลือกสนามที่จะคุมสกอร์ (แต่ละสนามแยกข้อมูลกัน)</p>
     <div class="flex gap-2 flex-wrap" id="sbCourtBtns"></div>
-    <p class="text-[11px] text-slate-400 mt-2">💡 เครื่องที่ 1 เลือกสนาม 1, เครื่องที่ 2 เลือกสนาม 2 — คะแนนและการบันทึกจะไม่ทับกัน</p>
+    <p class="text-[11px] text-slate-400 mt-2">💡 เครื่องที่ 1 เลือกสนาม 1, เครื่องที่ 2 เลือกสนาม 2 — บันทึกไม่ทับกัน</p>
   </div>
-
   <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm space-y-3">
     <div class="flex gap-2">
       <button onclick="setBoardMode('doubles')" id="sbmode-doubles" class="flex-1 py-2 rounded-xl text-sm font-semibold">👥 คู่</button>
       <button onclick="setBoardMode('singles')" id="sbmode-singles" class="flex-1 py-2 rounded-xl text-sm font-semibold">🧍 เดี่ยว</button>
       <select id="sbGamePoint" onchange="patchBoard({gamePoint:parseInt(this.value)})" class="px-3 rounded-xl border border-slate-200 text-sm bg-white">
-        <option value="11">11</option><option value="15">15</option><option value="21">21</option><option value="25">25</option>
-      </select>
+        <option value="11">11</option><option value="15">15</option><option value="21">21</option><option value="25">25</option></select>
     </div>
-
     <div class="grid grid-cols-2 gap-3">
-      <div class="space-y-2">
-        <p class="text-xs font-bold text-indigo-500">ฝั่ง A</p>
+      <div class="space-y-2"><p class="text-xs font-bold text-indigo-500">ฝั่ง A</p>
         <input id="sbNameA" onchange="patchBoard({teamAName:this.value})" placeholder="ชื่อทีม (ไม่บังคับ)" class="w-full px-2 py-2 rounded-xl border border-slate-200 text-sm" />
-        <div id="sbPlayersA" class="space-y-2"></div>
-      </div>
-      <div class="space-y-2">
-        <p class="text-xs font-bold text-rose-500">ฝั่ง B</p>
+        <div id="sbPlayersA" class="space-y-2"></div></div>
+      <div class="space-y-2"><p class="text-xs font-bold text-rose-500">ฝั่ง B</p>
         <input id="sbNameB" onchange="patchBoard({teamBName:this.value})" placeholder="ชื่อทีม (ไม่บังคับ)" class="w-full px-2 py-2 rounded-xl border border-slate-200 text-sm" />
-        <div id="sbPlayersB" class="space-y-2"></div>
-      </div>
+        <div id="sbPlayersB" class="space-y-2"></div></div>
     </div>
-
-    <button onclick="pullFromCourt()" class="w-full py-2 rounded-xl bg-slate-100 text-slate-600 text-xs font-semibold">⬇ ดึงรายชื่อจากสนามนี้ในหน้า "จัดสนาม"</button>
+    <button onclick="pullFromCourt()" class="w-full py-2 rounded-xl bg-slate-100 text-slate-600 text-xs font-semibold">⬇ ดึงรายชื่อจากสนามนี้</button>
   </div>
-
   <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
     <div class="grid grid-cols-2 gap-3 text-center">
       <div class="rounded-2xl bg-indigo-50 p-3">
@@ -172,20 +175,19 @@
 <!-- ========== SESSIONS ========== -->
 <section id="page-sessions" class="hidden space-y-4">
   <button onclick="go('home')" class="w-full py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-600 font-semibold text-sm shadow-sm">🏠 กลับหน้าหลัก</button>
-
   <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
     <p class="font-bold text-slate-700 mb-3">➕ สร้างนัดตีใหม่</p>
     <div class="grid grid-cols-2 gap-2">
       <div class="col-span-2"><label class="text-[11px] text-slate-400">ชื่อนัด / สถานที่</label>
         <input id="sesVenue" placeholder="เช่น สนามแบดบ้านดอน" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm" /></div>
       <div><label class="text-[11px] text-slate-400">วันที่</label><input id="sesDate" type="date" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm" /></div>
-      <div><label class="text-[11px] text-slate-400">จำนวนสนามที่จอง</label>
+      <div><label class="text-[11px] text-slate-400">จำนวนสนาม</label>
         <select id="sesCourts" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white"><option value="1">1 สนาม</option><option value="2" selected>2 สนาม</option><option value="3">3 สนาม</option><option value="4">4 สนาม</option></select></div>
-      <div><label class="text-[11px] text-slate-400">เวลาเริ่ม (24 ชม.)</label>
+      <div><label class="text-[11px] text-slate-400">เริ่ม (24 ชม.)</label>
         <div class="flex items-center gap-1"><select id="sesStartH" class="flex-1 px-2 py-2 rounded-xl border border-slate-200 text-sm bg-white"></select><span class="text-slate-400">:</span><select id="sesStartM" class="flex-1 px-2 py-2 rounded-xl border border-slate-200 text-sm bg-white"></select></div></div>
-      <div><label class="text-[11px] text-slate-400">เวลาเลิก (24 ชม.)</label>
+      <div><label class="text-[11px] text-slate-400">เลิก (24 ชม.)</label>
         <div class="flex items-center gap-1"><select id="sesEndH" class="flex-1 px-2 py-2 rounded-xl border border-slate-200 text-sm bg-white"></select><span class="text-slate-400">:</span><select id="sesEndM" class="flex-1 px-2 py-2 rounded-xl border border-slate-200 text-sm bg-white"></select></div></div>
-      <div class="col-span-2"><label class="text-[11px] text-slate-400">หมายเหตุ (ค่าสนาม/ลูก)</label>
+      <div class="col-span-2"><label class="text-[11px] text-slate-400">หมายเหตุ</label>
         <input id="sesNote" placeholder="เช่น หัวละ 80 บาท" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm" /></div>
     </div>
     <button onclick="createSession()" class="w-full mt-3 bg-indigo-600 text-white font-bold py-3 rounded-2xl">สร้างนัด</button>
@@ -196,7 +198,6 @@
 <!-- ========== MEMBERS ========== -->
 <section id="page-members" class="hidden space-y-4">
   <button onclick="go('home')" class="w-full py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-600 font-semibold text-sm shadow-sm">🏠 กลับหน้าหลัก</button>
-
   <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
     <p class="font-bold text-slate-700 mb-3" id="mFormTitle">➕ เพิ่มสมาชิก</p>
     <div class="flex gap-4">
@@ -210,15 +211,13 @@
         <input id="mNick" placeholder="ชื่อเล่น (ใช้แสดงผล)" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm" />
         <div class="grid grid-cols-2 gap-2">
           <input id="mFirst" placeholder="ชื่อจริง" class="px-3 py-2 rounded-xl border border-slate-200 text-sm" />
-          <input id="mLast" placeholder="นามสกุล" class="px-3 py-2 rounded-xl border border-slate-200 text-sm" />
-        </div>
+          <input id="mLast" placeholder="นามสกุล" class="px-3 py-2 rounded-xl border border-slate-200 text-sm" /></div>
         <select id="mLevel" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white">
-          <option value="N">🌱 มือใหม่</option><option value="S">🙂 เริ่มเก่ง</option><option value="P" selected>💪 ปานกลาง</option><option value="C">🔥 มือดี</option><option value="B">👑 เซียน</option>
-        </select>
+          <option value="N">🌱 มือใหม่</option><option value="S">🙂 เริ่มเก่ง</option><option value="P" selected>💪 ปานกลาง</option><option value="C">🔥 มือดี</option><option value="B">👑 เซียน</option></select>
+        <label class="flex items-center gap-2 text-[11px] text-slate-500"><input type="checkbox" id="mLinkMe" /> ผูกโปรไฟล์นี้กับบัญชีของฉัน</label>
         <div class="flex gap-2">
           <button onclick="saveMember()" id="mSaveBtn" class="flex-1 bg-indigo-600 text-white font-semibold py-2.5 rounded-xl text-sm">บันทึก</button>
-          <button onclick="resetMemberForm()" id="mCancelBtn" class="hidden px-4 bg-slate-100 text-slate-500 rounded-xl text-sm">ยกเลิก</button>
-        </div>
+          <button onclick="resetMemberForm()" id="mCancelBtn" class="hidden px-4 bg-slate-100 text-slate-500 rounded-xl text-sm">ยกเลิก</button></div>
       </div>
     </div>
   </div>
@@ -228,23 +227,21 @@
 <!-- ========== SCHEDULE ========== -->
 <section id="page-schedule" class="hidden space-y-4">
   <button onclick="go('home')" class="w-full py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-600 font-semibold text-sm shadow-sm">🏠 กลับหน้าหลัก</button>
-
   <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
-    <p class="font-bold text-slate-700 mb-1">📋 สร้างตารางแข่ง (ระบุวัน-เวลา)</p>
-    <p class="text-[11px] text-slate-400 mb-3">ระบบเกลี่ยให้ทุกคนได้เล่น/พักเท่าๆ กัน และคำนวณเวลาแต่ละรอบให้อัตโนมัติ (24 ชม.)</p>
+    <p class="font-bold text-slate-700 mb-1">📋 สร้างตารางแข่ง</p>
+    <p class="text-[11px] text-slate-400 mb-3">เกลี่ยให้ทุกคนได้เล่น/พักเท่าๆ กัน คำนวณเวลาอัตโนมัติ (24 ชม.)</p>
     <div class="grid grid-cols-2 gap-2">
       <div><label class="text-[11px] text-slate-400">วันที่แข่ง</label><input id="schDate" type="date" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm" /></div>
-      <div><label class="text-[11px] text-slate-400">เวลาเริ่ม (24 ชม.)</label>
-        <div class="flex items-center gap-1"><select id="schStartH" class="flex-1 px-2 py-2 rounded-xl border border-slate-200 text-sm bg-white"></select><span class="text-slate-400">:</span><select id="schStartM" class="flex-1 px-2 py-2 rounded-xl border border-slate-200 text-sm bg-white"></select></div></div>
+      <div><label class="text-[11px] text-slate-400">เวลาเริ่ม</label>
+        <div class="flex items-center gap-1"><select id="schStartH" class="flex-1 px-2 py-2 rounded-xl border border-slate-200 text-sm bg-white"></select>:<select id="schStartM" class="flex-1 px-2 py-2 rounded-xl border border-slate-200 text-sm bg-white"></select></div></div>
       <div><label class="text-[11px] text-slate-400">นาที/แมตช์</label><input id="schMin" type="number" value="15" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm" /></div>
       <div><label class="text-[11px] text-slate-400">จำนวนสนาม</label>
         <select id="schCourts" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white"><option>1</option><option selected>2</option><option>3</option><option>4</option></select></div>
-      <div class="col-span-2"><label class="text-[11px] text-slate-400">จำนวนแมตช์ทั้งหมด</label><input id="schCount" type="number" value="10" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm" /></div>
+      <div class="col-span-2"><label class="text-[11px] text-slate-400">จำนวนแมตช์</label><input id="schCount" type="number" value="10" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm" /></div>
     </div>
     <div class="flex gap-2 mt-3">
       <button onclick="genSchedule()" class="flex-1 bg-indigo-600 text-white font-bold py-3 rounded-2xl text-sm">สร้างตาราง</button>
-      <button onclick="clearSchedule()" class="px-4 bg-slate-100 text-slate-500 rounded-2xl text-sm">ล้าง</button>
-    </div>
+      <button onclick="clearSchedule()" class="px-4 bg-slate-100 text-slate-500 rounded-2xl text-sm">ล้าง</button></div>
   </div>
   <div id="scheduleList" class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm"></div>
 </section>
@@ -252,14 +249,12 @@
 <!-- ========== STATS ========== -->
 <section id="page-stats" class="hidden space-y-4">
   <button onclick="go('home')" class="w-full py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-600 font-semibold text-sm shadow-sm">🏠 กลับหน้าหลัก</button>
-  <div class="bg-white rounded-2xl p-3 border border-slate-100 shadow-sm flex gap-2 items-center">
-    <select id="statsDate" onchange="statsFilter=this.value;renderStats()" class="flex-1 px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white"></select>
-  </div>
+  <div class="bg-white rounded-2xl p-3 border border-slate-100 shadow-sm">
+    <select id="statsDate" onchange="statsFilter=this.value;renderStats()" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white"></select></div>
   <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm overflow-x-auto">
     <table class="w-full text-sm"><thead><tr class="text-slate-400 text-xs border-b">
       <th class="text-left py-2">ผู้เล่น</th><th class="text-center">เล่น</th><th class="text-center">ชนะ</th><th class="text-center">แพ้</th><th class="text-center">%</th></tr></thead>
-      <tbody id="statsBody"></tbody></table>
-  </div>
+      <tbody id="statsBody"></tbody></table></div>
 </section>
 
 <!-- ========== HISTORY ========== -->
@@ -267,9 +262,41 @@
   <button onclick="go('home')" class="w-full py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-600 font-semibold text-sm shadow-sm">🏠 กลับหน้าหลัก</button>
   <div class="bg-white rounded-2xl p-3 border border-slate-100 shadow-sm flex gap-2">
     <select id="histDate" onchange="histFilter=this.value;renderHistory()" class="flex-1 px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white"></select>
-    <button onclick="openManual()" class="px-3 py-2 rounded-xl bg-emerald-500 text-white text-sm font-semibold">+ เพิ่ม</button>
-  </div>
+    <button onclick="openManual()" class="px-3 py-2 rounded-xl bg-emerald-500 text-white text-sm font-semibold">+ เพิ่ม</button></div>
   <div id="historyList" class="space-y-2"></div>
+</section>
+
+<!-- ========== ACCOUNT / SETTINGS ========== -->
+<section id="page-account" class="hidden space-y-4">
+  <button onclick="go('home')" class="w-full py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-600 font-semibold text-sm shadow-sm">🏠 กลับหน้าหลัก</button>
+
+  <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+    <p class="font-bold text-slate-700 mb-3">👤 บัญชีของฉัน</p>
+    <div id="accountBox" class="flex items-center gap-3"></div>
+    <div class="grid grid-cols-2 gap-2 mt-4">
+      <button onclick="logout()" class="py-2.5 rounded-xl bg-rose-50 text-rose-500 font-semibold text-sm">ออกจากระบบ</button>
+      <button onclick="askNotify()" class="py-2.5 rounded-xl bg-slate-100 text-slate-600 font-semibold text-sm">🔔 เปิดแจ้งเตือน</button>
+    </div>
+    <div class="mt-3">
+      <label class="text-[11px] text-slate-400">ผูกกับโปรไฟล์สมาชิก (เพื่อกดเข้าร่วมนัดในชื่อตัวเอง)</label>
+      <select id="linkPlayerSel" onchange="linkPlayer(this.value)" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white mt-1"></select>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+    <p class="font-bold text-slate-700 mb-1">💬 แจ้งเตือนเข้า LINE</p>
+    <p class="text-[11px] text-slate-400 mb-3">วิธีง่ายสุด: กด "แชร์ไป LINE" แล้วเลือกกลุ่มปลายทาง · ถ้าตั้ง Webhook ไว้จะส่งอัตโนมัติได้</p>
+    <label class="text-[11px] text-slate-400">LINE Webhook URL (ไม่บังคับ)</label>
+    <input id="lineHook" placeholder="https://... (Apps Script / Cloud Function)" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm mb-2" />
+    <button onclick="saveSettings()" class="w-full py-2.5 rounded-xl bg-indigo-600 text-white font-semibold text-sm">บันทึกการตั้งค่า</button>
+    <p class="text-[10px] text-slate-400 mt-2">⏰ ระบบจะเตือนล่วงหน้า 60 นาทีก่อนถึงเวลานัด (ต้องเปิดแอปค้างไว้ + อนุญาตการแจ้งเตือน)</p>
+  </div>
+
+  <div id="adminPanel" class="hidden bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+    <p class="font-bold text-slate-700 mb-1">🛡️ จัดการผู้ใช้ (เฉพาะ Admin)</p>
+    <p class="text-[11px] text-slate-400 mb-3">ปรับระดับสิทธิ์ / ลบผู้ใช้ออกจากระบบ</p>
+    <div id="userList" class="space-y-2"></div>
+  </div>
 </section>
 
 </div>
@@ -281,33 +308,26 @@
     <div class="flex gap-2 shrink-0">
       <button onclick="fsSwap()" class="px-3 py-1.5 bg-white/10 rounded-lg">🔁 สลับ</button>
       <button onclick="resetBoard()" class="px-3 py-1.5 bg-white/10 rounded-lg">↺ รีเซ็ต</button>
-      <button onclick="closeFs()" class="px-3 py-1.5 bg-white/10 rounded-lg">✕ ปิด</button>
-    </div>
+      <button onclick="closeFs()" class="px-3 py-1.5 bg-white/10 rounded-lg">✕ ปิด</button></div>
   </div>
-
   <div class="grid grid-cols-2 h-full">
-    <!-- ฝั่ง A -->
     <div class="relative flex flex-col items-center justify-center bg-indigo-600 px-2 pt-10 pb-24">
       <div id="fsFacesA" class="flex gap-2 justify-center mb-1"></div>
       <p id="fsNameA" class="text-[2.6vw] sm:text-base font-semibold text-center opacity-90 truncate w-full px-2"></p>
       <p id="fsScoreA" onclick="bumpScore('A',1)" class="text-[22vw] leading-none font-black cursor-pointer">0</p>
       <div class="absolute bottom-16 left-0 right-0 flex justify-center gap-5">
         <button onclick="bumpScore('A',-1)" class="w-20 h-20 rounded-full bg-black/30 text-4xl font-bold active:scale-90 transition">−</button>
-        <button onclick="bumpScore('A',1)" class="w-20 h-20 rounded-full bg-white/25 text-4xl font-bold active:scale-90 transition">+</button>
-      </div>
+        <button onclick="bumpScore('A',1)" class="w-20 h-20 rounded-full bg-white/25 text-4xl font-bold active:scale-90 transition">+</button></div>
     </div>
-    <!-- ฝั่ง B -->
     <div class="relative flex flex-col items-center justify-center bg-rose-600 px-2 pt-10 pb-24">
       <div id="fsFacesB" class="flex gap-2 justify-center mb-1"></div>
       <p id="fsNameB" class="text-[2.6vw] sm:text-base font-semibold text-center opacity-90 truncate w-full px-2"></p>
       <p id="fsScoreB" onclick="bumpScore('B',1)" class="text-[22vw] leading-none font-black cursor-pointer">0</p>
       <div class="absolute bottom-16 left-0 right-0 flex justify-center gap-5">
         <button onclick="bumpScore('B',-1)" class="w-20 h-20 rounded-full bg-black/30 text-4xl font-bold active:scale-90 transition">−</button>
-        <button onclick="bumpScore('B',1)" class="w-20 h-20 rounded-full bg-white/25 text-4xl font-bold active:scale-90 transition">+</button>
-      </div>
+        <button onclick="bumpScore('B',1)" class="w-20 h-20 rounded-full bg-white/25 text-4xl font-bold active:scale-90 transition">+</button></div>
     </div>
   </div>
-
   <button onclick="saveBoardMatch()" class="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 bg-emerald-500 px-8 py-3 rounded-2xl font-bold shadow-xl">💾 บันทึกผล</button>
 </div>
 
@@ -320,13 +340,11 @@
         <input id="endScoreA" type="number" class="w-full text-center text-2xl font-bold border rounded-xl py-2" /></div>
       <span class="text-slate-300">:</span>
       <div class="flex-1 text-center"><p id="endNameB" class="text-xs text-rose-500 truncate mb-1"></p>
-        <input id="endScoreB" type="number" class="w-full text-center text-2xl font-bold border rounded-xl py-2" /></div>
-    </div>
+        <input id="endScoreB" type="number" class="w-full text-center text-2xl font-bold border rounded-xl py-2" /></div></div>
     <div class="space-y-2 mt-4">
       <button onclick="confirmEnd(true)" class="w-full bg-emerald-500 text-white py-2.5 rounded-xl font-semibold text-sm">บันทึกสกอร์ & จบแมตช์</button>
       <button onclick="confirmEnd(false)" class="w-full bg-slate-100 text-slate-600 py-2.5 rounded-xl font-semibold text-sm">จบโดยไม่บันทึก</button>
-      <button onclick="closeModal('endModal')" class="w-full text-slate-400 text-xs py-1">ยกเลิก</button>
-    </div>
+      <button onclick="closeModal('endModal')" class="w-full text-slate-400 text-xs py-1">ยกเลิก</button></div>
   </div>
 </div>
 
@@ -339,10 +357,8 @@
     <input id="manNameA" class="w-full px-3 py-2 rounded-xl border text-sm mb-2" />
     <label class="text-[11px] text-slate-400">ชื่อฝั่ง B</label>
     <input id="manNameB" class="w-full px-3 py-2 rounded-xl border text-sm mb-2" />
-    <div class="flex gap-2">
-      <input id="manScoreA" type="number" placeholder="สกอร์ A" class="flex-1 px-3 py-2 rounded-xl border text-sm" />
-      <input id="manScoreB" type="number" placeholder="สกอร์ B" class="flex-1 px-3 py-2 rounded-xl border text-sm" />
-    </div>
+    <div class="flex gap-2"><input id="manScoreA" type="number" placeholder="สกอร์ A" class="flex-1 px-3 py-2 rounded-xl border text-sm" />
+      <input id="manScoreB" type="number" placeholder="สกอร์ B" class="flex-1 px-3 py-2 rounded-xl border text-sm" /></div>
     <button onclick="saveManual()" class="w-full mt-4 bg-indigo-600 text-white py-2.5 rounded-xl font-semibold text-sm">บันทึก</button>
     <button onclick="closeModal('manualModal')" class="w-full text-slate-400 text-xs py-2">ยกเลิก</button>
   </div>
@@ -357,9 +373,9 @@
       <div><label class="text-[11px] text-slate-400">วันที่</label><input id="edDate" type="date" class="w-full px-3 py-2 rounded-xl border text-sm" /></div>
       <div><label class="text-[11px] text-slate-400">จำนวนสนาม</label>
         <select id="edCourts" class="w-full px-3 py-2 rounded-xl border text-sm bg-white"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></div>
-      <div><label class="text-[11px] text-slate-400">เริ่ม (24 ชม.)</label>
+      <div><label class="text-[11px] text-slate-400">เริ่ม</label>
         <div class="flex items-center gap-1"><select id="edStartH" class="flex-1 px-2 py-2 rounded-xl border text-sm bg-white"></select>:<select id="edStartM" class="flex-1 px-2 py-2 rounded-xl border text-sm bg-white"></select></div></div>
-      <div><label class="text-[11px] text-slate-400">เลิก (24 ชม.)</label>
+      <div><label class="text-[11px] text-slate-400">เลิก</label>
         <div class="flex items-center gap-1"><select id="edEndH" class="flex-1 px-2 py-2 rounded-xl border text-sm bg-white"></select>:<select id="edEndM" class="flex-1 px-2 py-2 rounded-xl border text-sm bg-white"></select></div></div>
     </div>
     <label class="text-[11px] text-slate-400 mt-2 block">หมายเหตุ</label>
@@ -382,23 +398,22 @@ const firebaseConfig = {
   appId: "1:607946702302:web:afaa8c97e3d2863d9a714f"
 };
 firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-const SV = firebase.firestore.FieldValue;
+const db=firebase.firestore(), auth=firebase.auth(), SV=firebase.firestore.FieldValue;
 
 /* ============ STATE ============ */
-let players=[], matchHistory=[], sessions=[], boards={};
-let liveState=defaultLive();
-let page='home', sbCourt=1, statsFilter='all', histFilter='all';
-let editingMember=null, photoData=null, photoRemove=false, endCtx=null, editingMatch=null, editingSession=null;
-const deviceId=(()=>{let d=localStorage.getItem('devId');if(!d){d='d'+Math.random().toString(36).slice(2,8);localStorage.setItem('devId',d);}return d;})();
+let players=[],matchHistory=[],sessions=[],boards={},users=[],settings={};
+let liveState=defaultLive(), me=null, started=false;
+let page='home',sbCourt=1,statsFilter='all',histFilter='all';
+let editingMember=null,photoData=null,photoRemove=false,endCtx=null,editingMatch=null,editingSession=null;
 
 const LV={N:{l:'มือใหม่',c:'bg-slate-100 text-slate-600',r:1},S:{l:'เริ่มเก่ง',c:'bg-blue-100 text-blue-600',r:2},P:{l:'ปานกลาง',c:'bg-green-100 text-green-600',r:3},C:{l:'มือดี',c:'bg-orange-100 text-orange-600',r:4},B:{l:'เซียน',c:'bg-purple-100 text-purple-600',r:5}};
+const ROLE={user:{l:'สมาชิก',c:'bg-slate-100 text-slate-600'},super:{l:'Super',c:'bg-amber-100 text-amber-700'},admin:{l:'Admin',c:'bg-rose-100 text-rose-600'}};
 const CATS=['😺','😸','😹','😻','😼','😽','🙀','😿','😾','🐱','🐈','🐯'];
 function catFor(id){let s=0;for(const ch of String(id||'x'))s+=ch.charCodeAt(0);return CATS[s%CATS.length];}
 
 function defaultLive(){return{courtCount:2,matchMode:'doubles',gamePoint:21,activeSessionId:null,
   courts:[1,2].map(id=>({id,teamA:[null,null],teamB:[null,null],status:'empty'})),schedule:[],partnerHistory:{}};}
-function defaultBoard(id){return{courtId:id,mode:'doubles',teamAName:'',teamBName:'',teamAIds:[null,null],teamBIds:[null,null],scoreA:0,scoreB:0,gamePoint:21,owner:deviceId};}
+function defaultBoard(id){return{courtId:id,mode:'doubles',teamAName:'',teamBName:'',teamAIds:[null,null],teamBIds:[null,null],scoreA:0,scoreB:0,gamePoint:21};}
 
 /* ============ UTILS ============ */
 const clone=o=>JSON.parse(JSON.stringify(o));
@@ -410,91 +425,110 @@ function nowTime(){const d=new Date();return String(d.getHours()).padStart(2,'0'
 function nameOf(id){const p=players.find(x=>x.id===id);return p?(p.nickname||[p.firstName,p.lastName].filter(Boolean).join(' ')||'ไม่มีชื่อ'):'—';}
 function thDate(d){if(!d)return'-';const[y,m,dd]=d.split('-');const M=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];return`${+dd} ${M[+m-1]} ${+y+543}`;}
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
-function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.remove('hidden');clearTimeout(window._t);window._t=setTimeout(()=>t.classList.add('hidden'),2200);}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.remove('hidden');clearTimeout(window._t);window._t=setTimeout(()=>t.classList.add('hidden'),2400);}
 function closeModal(id){const e=document.getElementById(id);e.classList.add('hidden');e.classList.remove('flex');}
 function openModal(id){const e=document.getElementById(id);e.classList.remove('hidden');e.classList.add('flex');}
-function avatar(p,sz='w-9 h-9'){ if(p&&p.photo)return`<img src="${p.photo}" class="${sz} rounded-full object-cover shrink-0"/>`;
+function avatar(p,sz='w-9 h-9'){if(p&&p.photo)return`<img src="${p.photo}" class="${sz} rounded-full object-cover shrink-0"/>`;
   return`<div class="${sz} rounded-full bg-amber-100 flex items-center justify-center shrink-0 text-lg">${catFor(p?p.id:'x')}</div>`;}
 function bigFace(id,sz='w-[9vw] h-[9vw] max-w-20 max-h-20 min-w-12 min-h-12'){
   const p=players.find(x=>x.id===id);
   if(p&&p.photo)return`<img src="${p.photo}" class="${sz} rounded-full object-cover border-2 border-white/60 shadow"/>`;
   return`<div class="${sz} rounded-full bg-white/25 border-2 border-white/40 flex items-center justify-center text-[5vw] sm:text-3xl shadow">${catFor(id||'x')}</div>`;}
-
-/* ---- 24h time selects ---- */
 function fillTime(hId,mId,val){
-  const h=document.getElementById(hId),m=document.getElementById(mId);
-  if(!h||!m)return;
+  const h=document.getElementById(hId),m=document.getElementById(mId);if(!h||!m)return;
   if(!h.options.length)h.innerHTML=Array.from({length:24},(_,i)=>`<option value="${String(i).padStart(2,'0')}">${String(i).padStart(2,'0')}</option>`).join('');
   if(!m.options.length)m.innerHTML=[0,5,10,15,20,25,30,35,40,45,50,55].map(i=>`<option value="${String(i).padStart(2,'0')}">${String(i).padStart(2,'0')}</option>`).join('');
-  if(val){const[a,b]=val.split(':');h.value=a;m.value=(Math.round(+b/5)*5+'').padStart(2,'0');}
-}
+  if(val){const[a,b]=val.split(':');h.value=a;m.value=(Math.round(+b/5)*5+'').padStart(2,'0');}}
 function readTime(hId,mId){const h=document.getElementById(hId),m=document.getElementById(mId);return (h?h.value:'00')+':'+(m?m.value:'00');}
+
+/* ============ AUTH & ROLES ============ */
+function loginGoogle(){
+  const p=new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(p).catch(e=>{document.getElementById('loginErr').textContent='เข้าสู่ระบบไม่สำเร็จ: '+e.message;});
+}
+function logout(){auth.signOut().then(()=>location.reload());}
+const isAdmin=()=>me&&me.role==='admin';
+const isSuper=()=>me&&(me.role==='super'||me.role==='admin');
+function canEditSession(s){return me&&(s.createdBy===me.uid||isSuper());}
+function canDeleteSession(s){return me&&(s.createdBy===me.uid||isAdmin());}
+function canEditPlayer(p){return me&&(p.ownerUid===me.uid||isSuper());}
+function canDeletePlayer(p){return me&&(p.ownerUid===me.uid||isAdmin());}
+function canDeleteMatch(m){return me&&(m.createdBy===me.uid||isAdmin());}
+function canEditMatch(m){return me&&(m.createdBy===me.uid||isSuper());}
+function deny(){toast('⛔ คุณไม่มีสิทธิ์ทำรายการนี้');}
+
+auth.onAuthStateChanged(async u=>{
+  if(!u){document.getElementById('loginGate').classList.remove('hidden');return;}
+  const ref=db.collection('users').doc(u.uid);
+  try{
+    const snap=await ref.get();
+    if(!snap.exists){
+      let role='user';
+      try{const a=await db.collection('users').where('role','==','admin').limit(1).get();if(a.empty)role='admin';}catch(e){}
+      await ref.set({email:u.email||'',name:u.displayName||'ผู้ใช้',photo:u.photoURL||'',role,playerId:null,createdAt:SV.serverTimestamp()});
+    }
+    ref.onSnapshot(s=>{if(s.exists){me={uid:u.uid,...s.data()};document.getElementById('loginGate').classList.add('hidden');if(!started){started=true;startApp();}renderAll();}});
+  }catch(e){document.getElementById('loginErr').textContent='โหลดข้อมูลผู้ใช้ไม่สำเร็จ: '+e.message;}
+});
 
 /* ============ LISTENERS ============ */
 let ready=0;
-function ok(){ready++;if(ready>=5)document.getElementById('syncStatus').textContent='🟢 ซิงก์ข้อมูลออนไลน์แล้ว';}
+function ok(){ready++;if(ready>=6)document.getElementById('syncStatus').textContent='🟢 ซิงก์ออนไลน์แล้ว';}
 function fail(e){document.getElementById('syncStatus').textContent='🔴 '+e.message;}
-
-db.collection('players').orderBy('createdAt','asc').onSnapshot(s=>{players=s.docs.map(d=>({id:d.id,...d.data()}));ok();renderAll();},fail);
-db.collection('liveState').doc('main').onSnapshot(s=>{if(s.exists)liveState={...defaultLive(),...s.data()};else db.collection('liveState').doc('main').set(liveState);ok();renderAll();},fail);
-db.collection('matchHistory').orderBy('createdAt','desc').limit(400).onSnapshot(s=>{matchHistory=s.docs.map(d=>({id:d.id,...d.data()}));ok();renderAll();},fail);
-db.collection('sessions').orderBy('date','desc').limit(60).onSnapshot(s=>{sessions=s.docs.map(d=>({id:d.id,...d.data()}));ok();renderAll();},fail);
-db.collection('scoreboards').onSnapshot(s=>{boards={};s.docs.forEach(d=>boards[d.id]=d.data());ok();renderBoard();},fail);
-
+function startApp(){
+  db.collection('players').orderBy('createdAt','asc').onSnapshot(s=>{players=s.docs.map(d=>({id:d.id,...d.data()}));ok();renderAll();},fail);
+  db.collection('liveState').doc('main').onSnapshot(s=>{if(s.exists)liveState={...defaultLive(),...s.data()};else db.collection('liveState').doc('main').set(liveState);ok();renderAll();},fail);
+  db.collection('matchHistory').orderBy('createdAt','desc').limit(400).onSnapshot(s=>{matchHistory=s.docs.map(d=>({id:d.id,...d.data()}));ok();renderAll();},fail);
+  db.collection('sessions').orderBy('date','desc').limit(60).onSnapshot(s=>{sessions=s.docs.map(d=>({id:d.id,...d.data()}));ok();renderAll();checkReminders();},fail);
+  db.collection('scoreboards').onSnapshot(s=>{boards={};s.docs.forEach(d=>boards[d.id]=d.data());ok();renderBoard();},fail);
+  db.collection('users').onSnapshot(s=>{users=s.docs.map(d=>({uid:d.id,...d.data()}));ok();renderAccount();},fail);
+  db.collection('settings').doc('main').onSnapshot(s=>{settings=s.exists?s.data():{};const h=document.getElementById('lineHook');if(h&&document.activeElement!==h)h.value=settings.lineWebhookUrl||'';});
+  fillTime('sesStartH','sesStartM','18:00');fillTime('sesEndH','sesEndM','21:00');
+  fillTime('schStartH','schStartM','18:00');fillTime('edStartH','edStartM','18:00');fillTime('edEndH','edEndM','21:00');
+  setInterval(checkReminders,60000);
+  go('home');
+}
 function pushLive(n){liveState=n;db.collection('liveState').doc('main').set(n).catch(()=>toast('บันทึกไม่สำเร็จ'));renderAll();}
 
 /* ============ NAV ============ */
-const TITLES={home:'🏸 ก๊วนแบดมินตัน',courts:'🏟️ จัดสนาม',scoreboard:'📺 สกอร์บอร์ด',sessions:'📅 นัดหมาย',members:'👤 สมาชิก',schedule:'📋 จัดตาราง',stats:'📊 สถิติ',history:'📜 ประวัติ'};
-function go(p){
-  page=p;
-  ['home','courts','scoreboard','sessions','members','schedule','stats','history'].forEach(x=>
+const TITLES={home:'🏸 ก๊วนแบดมินตัน',courts:'🏟️ จัดสนาม',scoreboard:'📺 สกอร์บอร์ด',sessions:'📅 นัดหมาย',members:'👤 สมาชิก',schedule:'📋 จัดตาราง',stats:'📊 สถิติ',history:'📜 ประวัติ',account:'⚙️ ตั้งค่า'};
+function go(p){page=p;
+  ['home','courts','scoreboard','sessions','members','schedule','stats','history','account'].forEach(x=>
     document.getElementById('page-'+x).classList.toggle('hidden',x!==p));
   document.getElementById('pageTitle').textContent=TITLES[p];
   document.getElementById('backBtn').classList.toggle('hidden',p==='home');
-  window.scrollTo({top:0});
-  renderAll();
-}
+  window.scrollTo({top:0});renderAll();}
 
 /* ============ HELPERS ============ */
 function eligible(){
   const s=sessions.find(x=>x.id===liveState.activeSessionId);
   if(s&&s.attendees&&s.attendees.length)return players.filter(p=>s.attendees.includes(p.id));
-  return players;
-}
+  return players;}
 function playingIds(st){const s=new Set();st.courts.forEach(c=>{[...c.teamA,...c.teamB].forEach(i=>{if(i)s.add(i);});});return s;}
 function gamesToday(id){let n=0;matchHistory.forEach(m=>{if(m.date===todayStr()){const ids=[...(m.teamA||[]),...(m.teamB||[])].map(x=>x.id);if(ids.includes(id))n++;}});return n;}
 function recalc(c){const f=[...c.teamA,...c.teamB].filter(Boolean).length,t=c.teamA.length+c.teamB.length;c.status=f===0?'empty':(f<t?'partial':'playing');}
+function upcomingSessions(){const t=todayStr();return [...sessions].filter(s=>s.date>=t).sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));}
 
 /* ============ COURTS ============ */
-function setMode(m){
-  if(m===liveState.matchMode)return;
+function setMode(m){if(m===liveState.matchMode)return;
   if(liveState.courts.some(c=>c.status!=='empty')&&!confirm('เปลี่ยนโหมดจะล้างสนามทั้งหมด ยืนยัน?'))return;
   const n=clone(liveState);n.matchMode=m;const s=slots(m);
   n.courts=n.courts.map(c=>({id:c.id,teamA:Array(s).fill(null),teamB:Array(s).fill(null),status:'empty'}));
-  n.schedule=[];pushLive(n);
-}
-function setCourtCount(k){
-  const n=clone(liveState);const s=slots(n.matchMode);const arr=[];
+  n.schedule=[];pushLive(n);}
+function setCourtCount(k){const n=clone(liveState);const s=slots(n.matchMode);const arr=[];
   for(let i=0;i<k;i++)arr.push(n.courts[i]||{id:i+1,teamA:Array(s).fill(null),teamB:Array(s).fill(null),status:'empty'});
-  n.courts=arr.map((c,i)=>({...c,id:i+1}));n.courtCount=k;pushLive(n);
-}
+  n.courts=arr.map((c,i)=>({...c,id:i+1}));n.courtCount=k;pushLive(n);}
 function setGamePoint(v){const n=clone(liveState);n.gamePoint=parseInt(v);pushLive(n);}
-function assignSlot(courtId,team,idx,pid){
-  const n=clone(liveState);
+function assignSlot(courtId,team,idx,pid){const n=clone(liveState);
   if(pid)n.courts.forEach(c=>{c.teamA=c.teamA.map(v=>v===pid?null:v);c.teamB=c.teamB.map(v=>v===pid?null:v);});
-  const c=n.courts.find(x=>x.id===courtId);c[team][idx]=pid||null;
-  n.courts.forEach(recalc);pushLive(n);
-}
+  const c=n.courts.find(x=>x.id===courtId);c[team][idx]=pid||null;n.courts.forEach(recalc);pushLive(n);}
 function clearCourt(id){const n=clone(liveState);const c=n.courts.find(x=>x.id===id);const s=slots(n.matchMode);
   c.teamA=Array(s).fill(null);c.teamB=Array(s).fill(null);c.status='empty';pushLive(n);toast('ล้างสนาม '+id);}
-function autoArrange(){
-  const n=clone(liveState);const req=need(n.matchMode);let filled=0;
+function autoArrange(){const n=clone(liveState);const req=need(n.matchMode);let filled=0;
   n.courts.filter(c=>c.status==='empty').forEach(c=>{
-    const busy=playingIds(n);
-    const q=eligible().filter(p=>!busy.has(p.id));
+    const busy=playingIds(n);const q=eligible().filter(p=>!busy.has(p.id));
     shuffle(q);q.sort((a,b)=>gamesToday(a.id)-gamesToday(b.id));
-    if(q.length<req)return;
-    const pick=q.slice(0,req);
+    if(q.length<req)return;const pick=q.slice(0,req);
     if(n.matchMode==='doubles'){
       const combos=[[[0,1],[2,3]],[[0,2],[1,3]],[[0,3],[1,2]]];let best=combos[0],bs=Infinity;
       combos.forEach(cb=>{const k=(a,b)=>[a,b].sort().join('_');
@@ -503,20 +537,14 @@ function autoArrange(){
         const sc=ph*10+lv+Math.random()*0.5;if(sc<bs){bs=sc;best=cb;}});
       c.teamA=[pick[best[0][0]].id,pick[best[0][1]].id];c.teamB=[pick[best[1][0]].id,pick[best[1][1]].id];
     } else {c.teamA=[pick[0].id];c.teamB=[pick[1].id];}
-    c.status='playing';filled++;
-  });
+    c.status='playing';filled++;});
   if(!filled){toast('ผู้เล่นว่างไม่พอ');return;}
-  pushLive(n);toast(`จัดลงสนามแล้ว ${filled} สนาม 🎉`);
-}
-function openEnd(id){
-  const c=liveState.courts.find(x=>x.id===id);if(!c||c.status!=='playing')return;
-  endCtx=id;
-  document.getElementById('endCourtNo').textContent=id;
+  pushLive(n);toast(`จัดลงสนามแล้ว ${filled} สนาม 🎉`);}
+function openEnd(id){const c=liveState.courts.find(x=>x.id===id);if(!c||c.status!=='playing')return;
+  endCtx=id;document.getElementById('endCourtNo').textContent=id;
   document.getElementById('endNameA').textContent=c.teamA.map(nameOf).join(' & ');
   document.getElementById('endNameB').textContent=c.teamB.map(nameOf).join(' & ');
-  document.getElementById('endScoreA').value='';document.getElementById('endScoreB').value='';
-  openModal('endModal');
-}
+  document.getElementById('endScoreA').value='';document.getElementById('endScoreB').value='';openModal('endModal');}
 async function confirmEnd(withScore){
   const n=clone(liveState);const c=n.courts.find(x=>x.id===endCtx);if(!c)return;
   const A=[...c.teamA],B=[...c.teamB];
@@ -525,72 +553,49 @@ async function confirmEnd(withScore){
     if(isNaN(sa)||isNaN(sb)){toast('กรอกสกอร์ให้ครบ');return;}
     await db.collection('matchHistory').add({date:todayStr(),time:nowTime(),court:endCtx,mode:n.matchMode,
       teamA:A.map(i=>({id:i,name:nameOf(i)})),teamB:B.map(i=>({id:i,name:nameOf(i)})),
-      scoreA:sa,scoreB:sb,createdAt:SV.serverTimestamp()}).catch(()=>toast('บันทึกไม่สำเร็จ'));
-  }
+      scoreA:sa,scoreB:sb,createdBy:me.uid,createdByName:me.name,createdAt:SV.serverTimestamp()}).catch(()=>toast('บันทึกไม่สำเร็จ'));}
   if(n.matchMode==='doubles'){const k=(a,b)=>[a,b].sort().join('_');
     n.partnerHistory[k(A[0],A[1])]=(n.partnerHistory[k(A[0],A[1])]||0)+1;
     n.partnerHistory[k(B[0],B[1])]=(n.partnerHistory[k(B[0],B[1])]||0)+1;}
   const s=slots(n.matchMode);c.teamA=Array(s).fill(null);c.teamB=Array(s).fill(null);c.status='empty';
-  closeModal('endModal');pushLive(n);toast('จบแมตช์สนาม '+endCtx);
-}
+  closeModal('endModal');pushLive(n);toast('จบแมตช์สนาม '+endCtx);}
 
 /* ============ SCOREBOARD ============ */
 const bkey=id=>'court_'+id;
 function getBoard(id){return boards[bkey(id)]||defaultBoard(id);}
-function patchBoard(patch,id){
-  const cid=id||sbCourt;
-  db.collection('scoreboards').doc(bkey(cid)).set({...getBoard(cid),...patch,courtId:cid,owner:deviceId,updatedAt:SV.serverTimestamp()},{merge:true})
-    .catch(()=>toast('บันทึกไม่สำเร็จ'));
-}
+function patchBoard(patch,id){const cid=id||sbCourt;
+  db.collection('scoreboards').doc(bkey(cid)).set({...getBoard(cid),...patch,courtId:cid,updatedBy:me?me.name:'',updatedAt:SV.serverTimestamp()},{merge:true}).catch(()=>toast('บันทึกไม่สำเร็จ'));}
 function selectSbCourt(id){sbCourt=id;if(!boards[bkey(id)])patchBoard({},id);renderBoard();}
 function setBoardMode(m){const s=slots(m);const b=getBoard(sbCourt);
   patchBoard({mode:m,teamAIds:Array(s).fill(null).map((_,i)=>(b.teamAIds||[])[i]||null),teamBIds:Array(s).fill(null).map((_,i)=>(b.teamBIds||[])[i]||null)});}
-function bumpScore(side,v){
-  const b=getBoard(sbCourt);
-  const val=Math.max(0,(side==='A'?b.scoreA:b.scoreB)+v);
-  patchBoard(side==='A'?{scoreA:val}:{scoreB:val});
-}
+function bumpScore(side,v){const b=getBoard(sbCourt);const val=Math.max(0,(side==='A'?b.scoreA:b.scoreB)+v);
+  patchBoard(side==='A'?{scoreA:val}:{scoreB:val});}
 function resetBoard(){patchBoard({scoreA:0,scoreB:0});}
 function fsSwap(){const b=getBoard(sbCourt);
   patchBoard({teamAName:b.teamBName,teamBName:b.teamAName,teamAIds:b.teamBIds,teamBIds:b.teamAIds,scoreA:b.scoreB,scoreB:b.scoreA});}
-function boardSideName(b,side){
-  const ids=(side==='A'?b.teamAIds:b.teamBIds)||[];
-  const named=ids.filter(Boolean).map(nameOf);
-  if(named.length)return named.join(' & ');
-  return (side==='A'?b.teamAName:b.teamBName)||('ทีม '+side);
-}
-function pullFromCourt(){
-  const c=liveState.courts.find(x=>x.id===sbCourt);
+function boardSideName(b,side){const ids=(side==='A'?b.teamAIds:b.teamBIds)||[];
+  const named=ids.filter(Boolean).map(nameOf);if(named.length)return named.join(' & ');
+  return (side==='A'?b.teamAName:b.teamBName)||('ทีม '+side);}
+function pullFromCourt(){const c=liveState.courts.find(x=>x.id===sbCourt);
   if(!c||c.status==='empty'){toast('สนามนี้ยังไม่มีผู้เล่น');return;}
   patchBoard({mode:liveState.matchMode,teamAIds:[...c.teamA],teamBIds:[...c.teamB],gamePoint:liveState.gamePoint,scoreA:0,scoreB:0});
-  toast('ดึงรายชื่อจากสนาม '+sbCourt+' แล้ว');
-}
-async function saveBoardMatch(){
-  const b=getBoard(sbCourt);
+  toast('ดึงรายชื่อจากสนาม '+sbCourt+' แล้ว');}
+async function saveBoardMatch(){const b=getBoard(sbCourt);
   if(b.scoreA===0&&b.scoreB===0){toast('ยังไม่มีคะแนน');return;}
-  const mk=side=>{const ids=(side==='A'?b.teamAIds:b.teamBIds)||[];
-    const real=ids.filter(Boolean);if(real.length)return real.map(i=>({id:i,name:nameOf(i)}));
-    return[{id:'x_'+boardSideName(b,side),name:boardSideName(b,side)}];};
+  const mk=side=>{const ids=(side==='A'?b.teamAIds:b.teamBIds)||[];const real=ids.filter(Boolean);
+    if(real.length)return real.map(i=>({id:i,name:nameOf(i)}));return[{id:'x_'+boardSideName(b,side),name:boardSideName(b,side)}];};
   try{
     await db.collection('matchHistory').add({date:todayStr(),time:nowTime(),court:sbCourt,mode:b.mode||'doubles',
-      teamA:mk('A'),teamB:mk('B'),scoreA:b.scoreA,scoreB:b.scoreB,source:'scoreboard',createdAt:SV.serverTimestamp()});
-    patchBoard({scoreA:0,scoreB:0});
-    toast('บันทึกผลสนาม '+sbCourt+' แล้ว ✅');
-  }catch(e){toast('บันทึกไม่สำเร็จ: '+e.message);}
-}
-function openFs(){
-  const el=document.getElementById('fsBoard');
-  el.classList.remove('hidden');
+      teamA:mk('A'),teamB:mk('B'),scoreA:b.scoreA,scoreB:b.scoreB,source:'scoreboard',
+      createdBy:me.uid,createdByName:me.name,createdAt:SV.serverTimestamp()});
+    patchBoard({scoreA:0,scoreB:0});toast('บันทึกผลสนาม '+sbCourt+' แล้ว ✅');
+  }catch(e){toast('บันทึกไม่สำเร็จ: '+e.message);}}
+function openFs(){const el=document.getElementById('fsBoard');el.classList.remove('hidden');
   if(el.requestFullscreen)el.requestFullscreen().catch(()=>{});
-  try{screen.orientation.lock('landscape');}catch(e){}
-  renderBoard();
-}
-function closeFs(){
-  document.getElementById('fsBoard').classList.add('hidden');
+  try{screen.orientation.lock('landscape');}catch(e){}renderBoard();}
+function closeFs(){document.getElementById('fsBoard').classList.add('hidden');
   if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});
-  try{screen.orientation.unlock();}catch(e){}
-}
-function openFsFromQuick(){go('scoreboard');setTimeout(openFs,150);}
+  try{screen.orientation.unlock();}catch(e){}}
 
 /* ============ SESSIONS ============ */
 async function createSession(){
@@ -600,66 +605,100 @@ async function createSession(){
   const start=readTime('sesStartH','sesStartM'),end=readTime('sesEndH','sesEndM');
   const note=document.getElementById('sesNote').value.trim();
   try{
-    await db.collection('sessions').add({venue,date,courts,start,end,note,attendees:[],createdAt:SV.serverTimestamp()});
+    await db.collection('sessions').add({venue,date,courts,start,end,note,attendees:[],declined:[],
+      createdBy:me.uid,createdByName:me.name,createdByPhoto:me.photo||'',createdAt:SV.serverTimestamp()});
     document.getElementById('sesVenue').value='';document.getElementById('sesNote').value='';
     toast('สร้างนัดเรียบร้อย 🎉');
-  }catch(e){toast('สร้างไม่สำเร็จ: '+e.message);}
-}
+  }catch(e){toast('สร้างไม่สำเร็จ: '+e.message);}}
 async function joinSession(sid,pid){
   if(!pid){toast('เลือกสมาชิกก่อน');return;}
   const s=sessions.find(x=>x.id===sid);if(!s)return;
-  const att=s.attendees||[];
-  if(att.includes(pid)){toast('เข้าร่วมไว้แล้ว');return;}
-  await db.collection('sessions').doc(sid).update({attendees:[...att,pid]});
-  toast(nameOf(pid)+' เข้าร่วมแล้ว ✅');
-}
-async function joinAll(sid){
-  if(!confirm('เพิ่มสมาชิกทั้งหมดเข้าร่วมนัดนี้?'))return;
-  await db.collection('sessions').doc(sid).update({attendees:players.map(p=>p.id)});
-  toast('เพิ่มทั้งหมดแล้ว');
-}
-async function leaveSession(sid,pid){
+  await db.collection('sessions').doc(sid).update({
+    attendees:[...new Set([...(s.attendees||[]),pid])],
+    declined:(s.declined||[]).filter(i=>i!==pid)});
+  toast(nameOf(pid)+' เข้าร่วมแล้ว ✅');}
+async function declineSession(sid,pid){
+  if(!pid){toast('เลือกสมาชิกก่อน');return;}
   const s=sessions.find(x=>x.id===sid);if(!s)return;
-  await db.collection('sessions').doc(sid).update({attendees:(s.attendees||[]).filter(i=>i!==pid)});
-  toast('นำออกจากรายชื่อแล้ว');
-}
-async function clearAttendees(sid){
-  if(!confirm('ล้างรายชื่อผู้เข้าร่วมทั้งหมด?'))return;
-  await db.collection('sessions').doc(sid).update({attendees:[]});
-}
-async function delSession(sid){if(!confirm('ลบนัดนี้?'))return;await db.collection('sessions').doc(sid).delete();toast('ลบแล้ว');}
-function openSessionEdit(sid){
-  const s=sessions.find(x=>x.id===sid);if(!s)return;
+  await db.collection('sessions').doc(sid).update({
+    declined:[...new Set([...(s.declined||[]),pid])],
+    attendees:(s.attendees||[]).filter(i=>i!==pid)});
+  toast(nameOf(pid)+' แจ้งไม่เข้าร่วม ❌');}
+async function removeFromLists(sid,pid){const s=sessions.find(x=>x.id===sid);if(!s)return;
+  await db.collection('sessions').doc(sid).update({attendees:(s.attendees||[]).filter(i=>i!==pid),declined:(s.declined||[]).filter(i=>i!==pid)});}
+function myJoin(sid){if(!me||!me.playerId){toast('ผูกโปรไฟล์สมาชิกก่อนที่หน้า ตั้งค่า');go('account');return;}joinSession(sid,me.playerId);}
+function myDecline(sid){if(!me||!me.playerId){toast('ผูกโปรไฟล์สมาชิกก่อนที่หน้า ตั้งค่า');go('account');return;}declineSession(sid,me.playerId);}
+async function joinAll(sid){const s=sessions.find(x=>x.id===sid);if(!canEditSession(s))return deny();
+  if(!confirm('เพิ่มสมาชิกทั้งหมดเข้าร่วม?'))return;
+  await db.collection('sessions').doc(sid).update({attendees:players.map(p=>p.id),declined:[]});}
+async function clearAttendees(sid){const s=sessions.find(x=>x.id===sid);if(!canEditSession(s))return deny();
+  if(!confirm('ล้างรายชื่อทั้งหมด?'))return;
+  await db.collection('sessions').doc(sid).update({attendees:[],declined:[]});}
+async function delSession(sid){const s=sessions.find(x=>x.id===sid);if(!canDeleteSession(s))return deny();
+  if(!confirm('ลบนัดนี้?'))return;await db.collection('sessions').doc(sid).delete();toast('ลบแล้ว');}
+function openSessionEdit(sid){const s=sessions.find(x=>x.id===sid);if(!s)return;
+  if(!canEditSession(s))return deny();
   editingSession=sid;
   document.getElementById('edVenue').value=s.venue||'';
   document.getElementById('edDate').value=s.date||todayStr();
   document.getElementById('edCourts').value=String(s.courts||2);
-  fillTime('edStartH','edStartM',s.start||'18:00');
-  fillTime('edEndH','edEndM',s.end||'21:00');
-  document.getElementById('edNote').value=s.note||'';
-  openModal('sesEditModal');
-}
-async function saveSessionEdit(){
-  if(!editingSession)return;
-  try{
-    await db.collection('sessions').doc(editingSession).update({
+  fillTime('edStartH','edStartM',s.start||'18:00');fillTime('edEndH','edEndM',s.end||'21:00');
+  document.getElementById('edNote').value=s.note||'';openModal('sesEditModal');}
+async function saveSessionEdit(){if(!editingSession)return;
+  try{await db.collection('sessions').doc(editingSession).update({
       venue:document.getElementById('edVenue').value.trim()||'ก๊วนแบด',
       date:document.getElementById('edDate').value||todayStr(),
       courts:parseInt(document.getElementById('edCourts').value),
       start:readTime('edStartH','edStartM'),end:readTime('edEndH','edEndM'),
       note:document.getElementById('edNote').value.trim()});
     closeModal('sesEditModal');toast('แก้ไขนัดแล้ว ✅');
-  }catch(e){toast('แก้ไขไม่สำเร็จ: '+e.message);}
-}
-function useSession(sid){
-  const s=sessions.find(x=>x.id===sid);if(!s)return;
+  }catch(e){toast('แก้ไขไม่สำเร็จ: '+e.message);}}
+function useSession(sid){const s=sessions.find(x=>x.id===sid);if(!s)return;
   const n=clone(liveState);n.activeSessionId=sid;
   const k=s.courts||2,sl=slots(n.matchMode),arr=[];
   for(let i=0;i<k;i++)arr.push(n.courts[i]||{id:i+1,teamA:Array(sl).fill(null),teamB:Array(sl).fill(null),status:'empty'});
   n.courts=arr.map((c,i)=>({...c,id:i+1}));n.courtCount=k;
-  pushLive(n);go('courts');toast('ใช้รายชื่อจากนัดนี้แล้ว');
-}
+  pushLive(n);go('courts');toast('ใช้รายชื่อจากนัดนี้แล้ว');}
 function clearActiveSession(){const n=clone(liveState);n.activeSessionId=null;pushLive(n);}
+
+/* ============ LINE & NOTIFY ============ */
+function sessionText(s){
+  const att=(s.attendees||[]).map(nameOf),dec=(s.declined||[]).map(nameOf);
+  return `🏸 นัดตีแบด\n📍 ${s.venue}\n📅 ${thDate(s.date)}\n⏰ ${s.start}-${s.end} น.\n🏟️ ${s.courts} สนาม`
+    +(s.note?`\n💰 ${s.note}`:'')
+    +`\n\n✅ เข้าร่วม (${att.length}): ${att.join(', ')||'-'}`
+    +(dec.length?`\n❌ ไม่ว่าง (${dec.length}): ${dec.join(', ')}`:'')
+    +`\n\n👤 สร้างโดย: ${s.createdByName||'-'}\n🔗 ${location.href}`;}
+function shareLine(sid){const s=sessions.find(x=>x.id===sid);if(!s)return;
+  window.open('https://line.me/R/share?text='+encodeURIComponent(sessionText(s)),'_blank');}
+async function pushLine(sid){
+  const url=(settings.lineWebhookUrl||'').trim();
+  if(!url){toast('ยังไม่ได้ตั้ง Webhook (ไปที่ ตั้งค่า)');return;}
+  const s=sessions.find(x=>x.id===sid);if(!s)return;
+  try{await fetch(url,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:sessionText(s)})});
+    toast('ส่งเข้า LINE แล้ว 📨');}catch(e){toast('ส่งไม่สำเร็จ: '+e.message);}}
+function copyText(sid){const s=sessions.find(x=>x.id===sid);if(!s)return;
+  navigator.clipboard.writeText(sessionText(s)).then(()=>toast('คัดลอกข้อความแล้ว 📋'));}
+function askNotify(){
+  if(!('Notification'in window)){toast('อุปกรณ์นี้ไม่รองรับการแจ้งเตือน');return;}
+  Notification.requestPermission().then(p=>toast(p==='granted'?'เปิดแจ้งเตือนแล้ว 🔔':'ไม่ได้รับอนุญาต'));}
+function checkReminders(){
+  if(!('Notification'in window)||Notification.permission!=='granted')return;
+  const now=new Date();
+  upcomingSessions().forEach(s=>{
+    if(s.date!==todayStr())return;
+    const[h,m]=(s.start||'00:00').split(':').map(Number);
+    const st=new Date();st.setHours(h,m,0,0);
+    const diff=(st-now)/60000;
+    if(diff>0&&diff<=60){
+      const key='rm_'+s.id;
+      if(localStorage.getItem(key))return;
+      localStorage.setItem(key,'1');
+      new Notification('🏸 ใกล้ถึงเวลาตีแบดแล้ว!',{body:`${s.venue}\n${s.start}-${s.end} น. · ${s.courts} สนาม\nเข้าร่วม ${(s.attendees||[]).length} คน`});
+    }});}
+function saveSettings(){
+  db.collection('settings').doc('main').set({lineWebhookUrl:document.getElementById('lineHook').value.trim()},{merge:true})
+    .then(()=>toast('บันทึกการตั้งค่าแล้ว ✅')).catch(e=>toast('ผิดพลาด: '+e.message));}
 
 /* ============ MEMBERS ============ */
 function resizeImg(file,max=220,q=.65){return new Promise((res,rej)=>{const r=new FileReader();
@@ -674,11 +713,15 @@ function clearPhoto(){photoData=null;photoRemove=true;document.getElementById('m
 function resetMemberForm(){editingMember=null;photoData=null;photoRemove=false;
   ['mNick','mFirst','mLast'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('mLevel').value='P';document.getElementById('mPhoto').value='';
+  document.getElementById('mLinkMe').checked=false;
   document.getElementById('mPhotoPrev').classList.add('hidden');document.getElementById('mPhotoHolder').classList.remove('hidden');
   document.getElementById('mFormTitle').textContent='➕ เพิ่มสมาชิก';document.getElementById('mCancelBtn').classList.add('hidden');}
-function editMember(id){const p=players.find(x=>x.id===id);if(!p)return;editingMember=id;photoData=null;photoRemove=false;
+function editMember(id){const p=players.find(x=>x.id===id);if(!p)return;
+  if(!canEditPlayer(p))return deny();
+  editingMember=id;photoData=null;photoRemove=false;
   document.getElementById('mNick').value=p.nickname||'';document.getElementById('mFirst').value=p.firstName||'';
   document.getElementById('mLast').value=p.lastName||'';document.getElementById('mLevel').value=p.level||'P';
+  document.getElementById('mLinkMe').checked=(p.ownerUid===me.uid);
   const pv=document.getElementById('mPhotoPrev');
   if(p.photo){pv.src=p.photo;pv.classList.remove('hidden');document.getElementById('mPhotoHolder').classList.add('hidden');}
   else{pv.classList.add('hidden');document.getElementById('mPhotoHolder').classList.remove('hidden');}
@@ -689,21 +732,35 @@ async function saveMember(){
   const firstName=document.getElementById('mFirst').value.trim();
   const lastName=document.getElementById('mLast').value.trim();
   const level=document.getElementById('mLevel').value;
+  const linkMe=document.getElementById('mLinkMe').checked;
   if(!nickname&&!firstName){toast('ใส่ชื่อเล่นหรือชื่อจริงอย่างน้อย 1 อย่าง');return;}
   const data={nickname,firstName,lastName,level};
   if(photoData)data.photo=photoData;else if(photoRemove)data.photo=null;
   try{
-    if(editingMember)await db.collection('players').doc(editingMember).update(data);
-    else{data.createdAt=SV.serverTimestamp();await db.collection('players').add(data);}
+    let pid=editingMember;
+    if(editingMember){if(linkMe)data.ownerUid=me.uid;await db.collection('players').doc(editingMember).update(data);}
+    else{data.createdAt=SV.serverTimestamp();data.ownerUid=linkMe?me.uid:null;
+      const ref=await db.collection('players').add(data);pid=ref.id;}
+    if(linkMe)await db.collection('users').doc(me.uid).update({playerId:pid});
     resetMemberForm();toast('บันทึกแล้ว ✅');
-  }catch(e){toast('ผิดพลาด: '+e.message);}
-}
-async function delMember(id){
+  }catch(e){toast('ผิดพลาด: '+e.message);}}
+async function delMember(id){const p=players.find(x=>x.id===id);
+  if(!canDeletePlayer(p))return deny();
   if(!confirm('ลบสมาชิก "'+nameOf(id)+'" ?'))return;
   const n=clone(liveState);n.courts.forEach(c=>{c.teamA=c.teamA.map(v=>v===id?null:v);c.teamB=c.teamB.map(v=>v===id?null:v);recalc(c);});
   await db.collection('liveState').doc('main').set(n);
-  await db.collection('players').doc(id).delete();toast('ลบแล้ว');
-}
+  await db.collection('players').doc(id).delete();toast('ลบแล้ว');}
+function linkPlayer(pid){db.collection('users').doc(me.uid).update({playerId:pid||null})
+  .then(()=>toast(pid?('ผูกกับ '+nameOf(pid)+' แล้ว'):'ยกเลิกการผูกแล้ว'));}
+
+/* ============ ADMIN ============ */
+async function setRole(uid,role){if(!isAdmin())return deny();
+  if(uid===me.uid&&role!=='admin'&&!confirm('ลดสิทธิ์ตัวเอง? จะแก้กลับไม่ได้ถ้าไม่มี Admin อื่น'))return;
+  await db.collection('users').doc(uid).update({role});toast('ปรับสิทธิ์แล้ว');}
+async function delUser(uid){if(!isAdmin())return deny();
+  if(uid===me.uid){toast('ลบตัวเองไม่ได้');return;}
+  if(!confirm('ลบผู้ใช้รายนี้ออกจากระบบ?'))return;
+  await db.collection('users').doc(uid).delete();toast('ลบผู้ใช้แล้ว');}
 
 /* ============ SCHEDULE ============ */
 function genSchedule(){
@@ -712,46 +769,37 @@ function genSchedule(){
   const start=readTime('schStartH','schStartM');
   const per=parseInt(document.getElementById('schMin').value||15);
   const courts=parseInt(document.getElementById('schCourts').value||2);
-  const req=need(liveState.matchMode);
-  const pool=eligible();
+  const req=need(liveState.matchMode);const pool=eligible();
   if(cnt<1){toast('ระบุจำนวนแมตช์');return;}
   if(pool.length<req){toast('ผู้เล่นไม่พอ (ต้องการ '+req+' คน)');return;}
-  const tmp=pool.map(p=>({id:p.id,g:0}));const out=[];
-  let round=1,made=0,guard=0;
-  while(made<cnt&&guard<cnt*5+40){
-    guard++;let arr=shuffle([...tmp]).sort((a,b)=>a.g-b.g);const used=new Set();let f=0;
+  const tmp=pool.map(p=>({id:p.id,g:0}));const out=[];let round=1,made=0,guard=0;
+  while(made<cnt&&guard<cnt*5+40){guard++;
+    let arr=shuffle([...tmp]).sort((a,b)=>a.g-b.g);const used=new Set();let f=0;
     while(f<courts&&made<cnt){
       const av=arr.filter(t=>!used.has(t.id));if(av.length<req)break;
       const pick=av.slice(0,req).map(t=>pool.find(p=>p.id===t.id));
       const A=req===2?[pick[0].id]:[pick[0].id,pick[1].id];
       const B=req===2?[pick[1].id]:[pick[2].id,pick[3].id];
-      const[h,m]=start.split(':').map(Number);
-      const total=h*60+m+(round-1)*per;
+      const[h,m]=start.split(':').map(Number);const total=h*60+m+(round-1)*per;
       const time=String(Math.floor(total/60)%24).padStart(2,'0')+':'+String(total%60).padStart(2,'0');
       out.push({id:'m'+Date.now()+made+Math.random().toString(36).slice(2,5),round,court:f+1,date,time,teamA:A,teamB:B,status:'pending'});
-      [...A,...B].forEach(i=>{used.add(i);const t=tmp.find(x=>x.id===i);if(t)t.g++;});
-      made++;f++;
-    }
-    if(f===0)break;round++;
-  }
+      [...A,...B].forEach(i=>{used.add(i);const t=tmp.find(x=>x.id===i);if(t)t.g++;});made++;f++;}
+    if(f===0)break;round++;}
   if(!out.length){toast('สร้างไม่สำเร็จ');return;}
-  const n=clone(liveState);n.schedule=out;pushLive(n);toast('สร้างตาราง '+out.length+' แมตช์ 🎉');
-}
+  const n=clone(liveState);n.schedule=out;pushLive(n);toast('สร้างตาราง '+out.length+' แมตช์ 🎉');}
 function clearSchedule(){if(!liveState.schedule.length){toast('ยังไม่มีตาราง');return;}
   if(!confirm('ล้างตารางทั้งหมด?'))return;const n=clone(liveState);n.schedule=[];pushLive(n);}
 function delSchedRow(id){const n=clone(liveState);n.schedule=n.schedule.filter(s=>s.id!==id);pushLive(n);}
 
-/* ============ HISTORY CRUD ============ */
+/* ============ HISTORY ============ */
 function openManual(id){
-  editingMatch=id||null;
-  const m=id?matchHistory.find(x=>x.id===id):null;
+  if(id){const m=matchHistory.find(x=>x.id===id);if(!canEditMatch(m))return deny();}
+  editingMatch=id||null;const m=id?matchHistory.find(x=>x.id===id):null;
   document.getElementById('manDate').value=m?m.date:todayStr();
   document.getElementById('manNameA').value=m?(m.teamA||[]).map(t=>t.name).join(' & '):'';
   document.getElementById('manNameB').value=m?(m.teamB||[]).map(t=>t.name).join(' & '):'';
   document.getElementById('manScoreA').value=m?m.scoreA:'';
-  document.getElementById('manScoreB').value=m?m.scoreB:'';
-  openModal('manualModal');
-}
+  document.getElementById('manScoreB').value=m?m.scoreB:'';openModal('manualModal');}
 async function saveManual(){
   const date=document.getElementById('manDate').value;
   const na=document.getElementById('manNameA').value.trim();
@@ -760,67 +808,105 @@ async function saveManual(){
   const sb=parseInt(document.getElementById('manScoreB').value);
   if(!date||!na||!nb||isNaN(sa)||isNaN(sb)){toast('กรอกข้อมูลให้ครบ');return;}
   try{
-    if(editingMatch){
-      const m=matchHistory.find(x=>x.id===editingMatch);
-      const keepA=(m.teamA||[]).length&&(m.teamA||[]).map(t=>t.name).join(' & ')===na;
-      const keepB=(m.teamB||[]).length&&(m.teamB||[]).map(t=>t.name).join(' & ')===nb;
+    if(editingMatch){const m=matchHistory.find(x=>x.id===editingMatch);
+      const keepA=(m.teamA||[]).map(t=>t.name).join(' & ')===na;
+      const keepB=(m.teamB||[]).map(t=>t.name).join(' & ')===nb;
       await db.collection('matchHistory').doc(editingMatch).update({date,scoreA:sa,scoreB:sb,
         teamA:keepA?m.teamA:[{id:'x_'+na,name:na}],teamB:keepB?m.teamB:[{id:'x_'+nb,name:nb}]});
     } else {
       await db.collection('matchHistory').add({date,time:nowTime(),court:0,mode:'manual',
-        teamA:[{id:'x_'+na,name:na}],teamB:[{id:'x_'+nb,name:nb}],scoreA:sa,scoreB:sb,createdAt:SV.serverTimestamp()});
-    }
+        teamA:[{id:'x_'+na,name:na}],teamB:[{id:'x_'+nb,name:nb}],scoreA:sa,scoreB:sb,
+        createdBy:me.uid,createdByName:me.name,createdAt:SV.serverTimestamp()});}
     closeModal('manualModal');toast('บันทึกแล้ว ✅');
-  }catch(e){toast('ผิดพลาด: '+e.message);}
-}
-async function delMatch(id){if(!confirm('ลบบันทึกนี้?'))return;await db.collection('matchHistory').doc(id).delete();toast('ลบแล้ว');}
+  }catch(e){toast('ผิดพลาด: '+e.message);}}
+async function delMatch(id){const m=matchHistory.find(x=>x.id===id);
+  if(!canDeleteMatch(m))return deny();
+  if(!confirm('ลบบันทึกนี้?'))return;await db.collection('matchHistory').doc(id).delete();toast('ลบแล้ว');}
+function onStatsDate(){}
 
 /* ============ RENDER ============ */
-function renderAll(){
-  renderHome();renderCourts();renderBoard();renderSessions();renderMembers();renderSchedule();
-  renderDateOptions();renderStats();renderHistory();
-}
+function renderAll(){if(!me)return;
+  renderUserChip();renderHome();renderCourts();renderBoard();renderSessions();
+  renderMembers();renderSchedule();renderDateOptions();renderStats();renderHistory();renderAccount();}
+function renderUserChip(){
+  const c=document.getElementById('userChip');if(!c||!me)return;
+  const r=ROLE[me.role]||ROLE.user;
+  c.innerHTML=(me.photo?`<img src="${me.photo}" class="w-6 h-6 rounded-full object-cover"/>`:`<div class="w-6 h-6 rounded-full bg-indigo-200 flex items-center justify-center text-[10px] font-bold text-indigo-700">${esc((me.name||'U').charAt(0))}</div>`)
+    +`<span class="text-[10px] font-semibold ${r.c} px-1.5 rounded-full">${r.l}</span>`;}
+
+function attendeeChips(s,list,type){
+  const arr=(s[list]||[]).filter(id=>players.some(p=>p.id===id));
+  if(!arr.length)return `<span class="text-[11px] opacity-60">—</span>`;
+  return arr.map(id=>`<span class="flex items-center gap-1 ${type==='y'?'bg-emerald-500/25':'bg-rose-500/25'} rounded-full pl-0.5 pr-2 py-0.5 text-[11px]">
+    ${avatar(players.find(p=>p.id===id),'w-5 h-5')}<span>${esc(nameOf(id))}</span></span>`).join('');}
+
 function renderHome(){
-  document.getElementById('homeTodayLabel').textContent=thDate(todayStr());
-  document.getElementById('homeClock').textContent=nowTime();
   document.getElementById('hStatMembers').textContent=players.length;
-  const s=sessions.find(x=>x.date===todayStr());
-  document.getElementById('hStatJoin').textContent=s?(s.attendees||[]).length:0;
+  const st=sessions.find(x=>x.date===todayStr());
+  document.getElementById('hStatJoin').textContent=st?(st.attendees||[]).length:0;
   document.getElementById('hStatMatch').textContent=matchHistory.filter(m=>m.date===todayStr()).length;
-  const el=document.getElementById('homeSession');
-  const up=[...sessions].sort((a,b)=>b.date.localeCompare(a.date))[0];
-  el.innerHTML=up?`<div class="flex items-center justify-between gap-2">
-    <div class="min-w-0"><p class="font-semibold text-slate-700 truncate">${esc(up.venue)}</p>
-    <p class="text-xs text-slate-400">${thDate(up.date)} · ${up.start||''}-${up.end||''} น. · ${up.courts||1} สนาม · เข้าร่วม ${(up.attendees||[]).length} คน</p></div>
-    <button onclick="go('sessions')" class="text-xs text-indigo-500 shrink-0">ดู ›</button></div>`
-    :'ยังไม่มีนัด — กดเมนู "นัดหมาย" เพื่อสร้าง';
-}
+
+  const up=upcomingSessions();
+  const hero=document.getElementById('heroSession');
+  if(!up.length){hero.innerHTML=`<p class="text-sm opacity-80">ยังไม่มีนัดที่กำลังจะถึง</p>
+    <button onclick="go('sessions')" class="mt-3 w-full py-2.5 rounded-xl bg-white text-indigo-700 font-bold text-sm">➕ สร้างนัดใหม่</button>`;}
+  else{
+    const s=up[0];const att=(s.attendees||[]).length,dec=(s.declined||[]).length;
+    hero.innerHTML=`
+      <p class="text-xl font-bold leading-tight">${esc(s.venue)}</p>
+      <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm mt-2 opacity-95">
+        <span>📅 ${thDate(s.date)}</span><span>⏰ ${s.start}–${s.end} น.</span><span>🏟️ ${s.courts} สนาม</span>
+        ${s.note?`<span>💰 ${esc(s.note)}</span>`:''}
+      </div>
+      <p class="text-[11px] opacity-70 mt-1">👤 สร้างโดย ${esc(s.createdByName||'-')}</p>
+      <div class="mt-3 bg-white/10 rounded-2xl p-3">
+        <p class="text-xs font-bold mb-1.5">✅ เข้าร่วม ${att} คน</p>
+        <div class="flex flex-wrap gap-1.5">${attendeeChips(s,'attendees','y')}</div>
+        <p class="text-xs font-bold mt-3 mb-1.5">❌ ไม่เข้าร่วม ${dec} คน</p>
+        <div class="flex flex-wrap gap-1.5">${attendeeChips(s,'declined','n')}</div>
+      </div>
+      <div class="grid grid-cols-2 gap-2 mt-3">
+        <button onclick="myJoin('${s.id}')" class="py-2.5 rounded-xl bg-emerald-400 text-emerald-950 font-bold text-sm">✅ ฉันไป</button>
+        <button onclick="myDecline('${s.id}')" class="py-2.5 rounded-xl bg-white/20 font-bold text-sm">❌ ไม่ว่าง</button>
+      </div>
+      <div class="grid grid-cols-3 gap-2 mt-2">
+        <button onclick="shareLine('${s.id}')" class="py-2 rounded-xl bg-white/15 text-[11px] font-semibold">💬 แชร์ LINE</button>
+        <button onclick="copyText('${s.id}')" class="py-2 rounded-xl bg-white/15 text-[11px] font-semibold">📋 คัดลอก</button>
+        <button onclick="useSession('${s.id}')" class="py-2 rounded-xl bg-white/15 text-[11px] font-semibold">🏟️ จัดก๊วน</button>
+      </div>`;}
+
+  const others=up.slice(1);
+  document.getElementById('otherSesCount').textContent=others.length?others.length+' นัด':'';
+  document.getElementById('homeOtherSessions').innerHTML=others.length?others.map(s=>`
+    <button onclick="go('sessions')" class="w-full text-left flex items-center justify-between gap-2 bg-slate-50 rounded-xl px-3 py-2">
+      <div class="min-w-0"><p class="text-sm font-semibold text-slate-700 truncate">${esc(s.venue)}</p>
+      <p class="text-[11px] text-slate-400">${thDate(s.date)} · ${s.start}–${s.end} น. · ${s.courts} สนาม</p></div>
+      <div class="text-right shrink-0"><p class="text-xs font-bold text-emerald-500">✅ ${(s.attendees||[]).length}</p>
+      <p class="text-[10px] text-rose-400">❌ ${(s.declined||[]).length}</p></div>
+    </button>`).join('')
+    :'<p class="text-sm text-slate-400">ไม่มีนัดอื่น</p>';}
+
 function renderCourts(){
   ['doubles','singles'].forEach(m=>{const b=document.getElementById('mode-'+m);if(b)
     b.className='flex-1 py-2 rounded-xl text-sm font-semibold transition '+(liveState.matchMode===m?'bg-indigo-600 text-white shadow':'bg-slate-100 text-slate-600');});
   const cb=document.getElementById('courtCountBtns');
   if(cb)cb.innerHTML=[1,2,3,4].map(n=>`<button onclick="setCourtCount(${n})" class="flex-1 py-2 rounded-xl font-semibold text-sm transition ${n===liveState.courtCount?'bg-indigo-600 text-white shadow':'bg-slate-100 text-slate-600'}">${n}</button>`).join('');
   const gp=document.getElementById('gamePointSel');if(gp)gp.value=String(liveState.gamePoint||21);
-
   const ban=document.getElementById('courtSessionBanner');
   const s=sessions.find(x=>x.id===liveState.activeSessionId);
   if(s){ban.classList.remove('hidden');
-    ban.innerHTML=`📅 ใช้รายชื่อจากนัด <b>${esc(s.venue)}</b> (${thDate(s.date)} ${s.start||''}-${s.end||''} น.) · เข้าร่วม ${(s.attendees||[]).length} คน
+    ban.innerHTML=`📅 ใช้รายชื่อจากนัด <b>${esc(s.venue)}</b> (${thDate(s.date)} ${s.start}–${s.end} น.) · เข้าร่วม ${(s.attendees||[]).length} คน
       <button onclick="clearActiveSession()" class="ml-2 underline">ยกเลิก</button>`;}
   else ban.classList.add('hidden');
 
-  const busy=playingIds(liveState);
-  const grid=document.getElementById('courtsGrid');
-  if(!grid)return;
+  const busy=playingIds(liveState);const grid=document.getElementById('courtsGrid');if(!grid)return;
   grid.innerHTML=liveState.courts.map(c=>{
     const opts=(team,idx,cur)=>{
       const avail=eligible().filter(p=>!busy.has(p.id)||p.id===cur);
       return `<select onchange="assignSlot(${c.id},'${team}',${idx},this.value)" class="w-full px-2 py-2 rounded-xl border text-sm bg-white ${cur?'border-indigo-300 font-semibold text-slate-800':'border-dashed border-slate-300 text-slate-400'}">
         <option value="">＋ เลือกผู้เล่น</option>
-        ${avail.map(p=>`<option value="${p.id}" ${p.id===cur?'selected':''}>${esc(nameOf(p.id))} · ${LV[p.level||'P'].l}</option>`).join('')}
-      </select>`;};
-    const head=c.status==='playing'?'bg-gradient-to-r from-indigo-500 to-violet-500 text-white'
-      :c.status==='partial'?'bg-amber-100 text-amber-700':'bg-slate-100 text-slate-500';
+        ${avail.map(p=>`<option value="${p.id}" ${p.id===cur?'selected':''}>${esc(nameOf(p.id))} · ${LV[p.level||'P'].l}</option>`).join('')}</select>`;};
+    const head=c.status==='playing'?'bg-gradient-to-r from-indigo-500 to-violet-500 text-white':c.status==='partial'?'bg-amber-100 text-amber-700':'bg-slate-100 text-slate-500';
     const badge=c.status==='playing'?'กำลังเล่น':c.status==='partial'?'รอเพิ่มคน':'ว่าง';
     return `<div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden fade-in">
       <div class="${head} px-4 py-2 flex justify-between items-center">
@@ -828,15 +914,12 @@ function renderCourts(){
       <div class="p-3 space-y-2">
         <div class="grid grid-cols-2 gap-2">
           <div class="space-y-1.5"><p class="text-[10px] font-bold text-indigo-500 text-center">ทีม A</p>${c.teamA.map((v,i)=>opts('teamA',i,v)).join('')}</div>
-          <div class="space-y-1.5"><p class="text-[10px] font-bold text-rose-500 text-center">ทีม B</p>${c.teamB.map((v,i)=>opts('teamB',i,v)).join('')}</div>
-        </div>
+          <div class="space-y-1.5"><p class="text-[10px] font-bold text-rose-500 text-center">ทีม B</p>${c.teamB.map((v,i)=>opts('teamB',i,v)).join('')}</div></div>
         <div class="grid grid-cols-3 gap-2 pt-1">
           <button onclick="sbCourt=${c.id};pullFromCourt();go('scoreboard')" class="py-2 rounded-xl bg-slate-800 text-white text-[11px] font-semibold">📺 สกอร์</button>
           <button onclick="openEnd(${c.id})" class="py-2 rounded-xl bg-emerald-500 text-white text-[11px] font-semibold">🏁 จบแมตช์</button>
-          <button onclick="clearCourt(${c.id})" class="py-2 rounded-xl bg-slate-100 text-slate-500 text-[11px] font-semibold">🗑 ล้าง</button>
-        </div>
-      </div></div>`;
-  }).join('');
+          <button onclick="clearCourt(${c.id})" class="py-2 rounded-xl bg-slate-100 text-slate-500 text-[11px] font-semibold">🗑 ล้าง</button></div>
+      </div></div>`;}).join('');
 
   const q=eligible().filter(p=>!busy.has(p.id)).sort((a,b)=>gamesToday(a.id)-gamesToday(b.id));
   const wc=document.getElementById('waitCount');if(wc)wc.textContent=q.length;
@@ -844,14 +927,12 @@ function renderCourts(){
   if(wl)wl.innerHTML=q.length?q.map(p=>`<div class="flex items-center gap-1.5 bg-amber-50 border border-amber-100 rounded-full pl-1 pr-3 py-1">
     ${avatar(p,'w-7 h-7')}<span class="text-sm text-slate-700">${esc(nameOf(p.id))}</span>
     <span class="text-[10px] text-slate-400">${gamesToday(p.id)} เกม</span></div>`).join('')
-    :'<p class="text-sm text-slate-400">ไม่มีใครรอคิว 🎉</p>';
-}
+    :'<p class="text-sm text-slate-400">ไม่มีใครรอคิว 🎉</p>';}
+
 function renderBoard(){
   const btns=document.getElementById('sbCourtBtns');
-  if(btns)btns.innerHTML=[1,2,3,4].map(n=>{
-    const b=boards[bkey(n)];const act=b&&(b.scoreA>0||b.scoreB>0);
+  if(btns)btns.innerHTML=[1,2,3,4].map(n=>{const b=boards[bkey(n)];const act=b&&(b.scoreA>0||b.scoreB>0);
     return `<button onclick="selectSbCourt(${n})" class="px-4 py-2 rounded-xl font-semibold text-sm transition ${n===sbCourt?'bg-rose-500 text-white shadow':'bg-slate-100 text-slate-600'}">สนาม ${n}${act?' 🔴':''}</button>`;}).join('');
-
   const b=getBoard(sbCourt);
   ['doubles','singles'].forEach(m=>{const e=document.getElementById('sbmode-'+m);if(e)
     e.className='flex-1 py-2 rounded-xl text-sm font-semibold transition '+((b.mode||'doubles')===m?'bg-slate-800 text-white':'bg-slate-100 text-slate-600');});
@@ -859,99 +940,95 @@ function renderBoard(){
   const na=document.getElementById('sbNameA'),nb=document.getElementById('sbNameB');
   if(na&&document.activeElement!==na)na.value=b.teamAName||'';
   if(nb&&document.activeElement!==nb)nb.value=b.teamBName||'';
-
   const s=slots(b.mode||'doubles');
-  const mk=(side)=>{const ids=(side==='A'?b.teamAIds:b.teamBIds)||[];
-    let h='';for(let i=0;i<s;i++){const cur=ids[i]||'';
+  const mk=side=>{const ids=(side==='A'?b.teamAIds:b.teamBIds)||[];let h='';
+    for(let i=0;i<s;i++){const cur=ids[i]||'';
       h+=`<select onchange="setBoardPlayer('${side}',${i},this.value)" class="w-full px-2 py-2 rounded-xl border border-slate-200 text-sm bg-white">
         <option value="">— เลือกสมาชิก —</option>
         ${players.map(p=>`<option value="${p.id}" ${p.id===cur?'selected':''}>${esc(nameOf(p.id))}</option>`).join('')}</select>`;}
     return h;};
   const pa=document.getElementById('sbPlayersA'),pb=document.getElementById('sbPlayersB');
   if(pa)pa.innerHTML=mk('A');if(pb)pb.innerHTML=mk('B');
-
-  const idsA=((b.teamAIds||[]).filter(Boolean)),idsB=((b.teamBIds||[]).filter(Boolean));
-  const facesSmall=ids=>(ids.length?ids:['x']).map(i=>avatar(players.find(p=>p.id===i),'w-8 h-8')).join('');
-  const facesBig=ids=>(ids.length?ids:['x']).map(i=>bigFace(i)).join('');
+  const idsA=(b.teamAIds||[]).filter(Boolean),idsB=(b.teamBIds||[]).filter(Boolean);
+  const small=ids=>(ids.length?ids:['x']).map(i=>avatar(players.find(p=>p.id===i),'w-8 h-8')).join('');
+  const big=ids=>(ids.length?ids:['x']).map(i=>bigFace(i)).join('');
   const setH=(id,v)=>{const e=document.getElementById(id);if(e)e.innerHTML=v;};
   const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
-  setH('mini-facesA',facesSmall(idsA));setH('mini-facesB',facesSmall(idsB));
-  setH('fsFacesA',facesBig(idsA));setH('fsFacesB',facesBig(idsB));
-
+  setH('mini-facesA',small(idsA));setH('mini-facesB',small(idsB));
+  setH('fsFacesA',big(idsA));setH('fsFacesB',big(idsB));
   const A=boardSideName(b,'A'),B=boardSideName(b,'B');
   set('mini-nameA',A);set('mini-nameB',B);set('mini-scoreA',b.scoreA||0);set('mini-scoreB',b.scoreB||0);
   set('fsNameA',A);set('fsNameB',B);set('fsScoreA',b.scoreA||0);set('fsScoreB',b.scoreB||0);
   const gpt=b.gamePoint||21;
-  const winA=(b.scoreA>=gpt&&b.scoreA-b.scoreB>=2),winB=(b.scoreB>=gpt&&b.scoreB-b.scoreA>=2);
-  set('fsInfo',`สนาม ${sbCourt} · ถึง ${gpt} แต้ม · ${nowTime()} น.${winA?' · 🏆 ซ้ายชนะ':winB?' · 🏆 ขวาชนะ':''}`);
-}
-function setBoardPlayer(side,idx,pid){
-  const b=getBoard(sbCourt);const s=slots(b.mode||'doubles');
+  const wa=(b.scoreA>=gpt&&b.scoreA-b.scoreB>=2),wb=(b.scoreB>=gpt&&b.scoreB-b.scoreA>=2);
+  set('fsInfo',`สนาม ${sbCourt} · ถึง ${gpt} แต้ม · ${nowTime()} น.${wa?' · 🏆 ซ้ายชนะ':wb?' · 🏆 ขวาชนะ':''}`);}
+function setBoardPlayer(side,idx,pid){const b=getBoard(sbCourt);const s=slots(b.mode||'doubles');
   const arr=Array(s).fill(null).map((_,i)=>((side==='A'?b.teamAIds:b.teamBIds)||[])[i]||null);
-  arr[idx]=pid||null;
-  patchBoard(side==='A'?{teamAIds:arr}:{teamBIds:arr});
-}
+  arr[idx]=pid||null;patchBoard(side==='A'?{teamAIds:arr}:{teamBIds:arr});}
+
 function renderSessions(){
   const el=document.getElementById('sessionList');if(!el)return;
   const d=document.getElementById('sesDate');if(d&&!d.value)d.value=todayStr();
-  fillTime('sesStartH','sesStartM',document.getElementById('sesStartH').value?null:'18:00');
-  fillTime('sesEndH','sesEndM',document.getElementById('sesEndH').value?null:'21:00');
   if(!sessions.length){el.innerHTML='<p class="text-center text-slate-400 text-sm py-8">ยังไม่มีนัด สร้างนัดแรกได้เลย</p>';return;}
   el.innerHTML=sessions.map(s=>{
-    const att=s.attendees||[];
-    const cap=(s.courts||1)*4;
+    const att=s.attendees||[],dec=s.declined||[];
+    const canEdit=canEditSession(s),canDel=canDeleteSession(s);
+    const chip=(id,type)=>`<span class="flex items-center gap-1.5 ${type==='y'?'bg-emerald-50 border-emerald-200':'bg-rose-50 border-rose-200'} border rounded-full pl-1 pr-2 py-1 text-xs">
+      ${avatar(players.find(p=>p.id===id),'w-6 h-6')}<span class="text-slate-700">${esc(nameOf(id))}</span>
+      <button onclick="removeFromLists('${s.id}','${id}')" class="text-slate-400 font-bold">✕</button></span>`;
     return `<div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm fade-in">
       <div class="flex items-start justify-between gap-2">
         <div class="min-w-0">
           <p class="font-bold text-slate-800 truncate">${esc(s.venue)}</p>
           <p class="text-xs text-slate-500">📅 ${thDate(s.date)} · ⏰ ${s.start||'--:--'}–${s.end||'--:--'} น.</p>
-          <p class="text-xs text-slate-500">🏟️ จอง ${s.courts||1} สนาม · รองรับ ~${cap} คน/รอบ ${s.note?('· 💰 '+esc(s.note)):''}</p>
-        </div>
+          <p class="text-xs text-slate-500">🏟️ ${s.courts||1} สนาม ${s.note?('· 💰 '+esc(s.note)):''}</p>
+          <p class="text-[11px] text-slate-400 mt-0.5">👤 สร้างโดย ${esc(s.createdByName||'-')}</p></div>
         <div class="flex gap-2 shrink-0">
-          <button onclick="openSessionEdit('${s.id}')" class="text-indigo-400 text-xs">✏️</button>
-          <button onclick="delSession('${s.id}')" class="text-rose-400 text-xs">🗑</button>
-        </div>
-      </div>
+          ${canEdit?`<button onclick="openSessionEdit('${s.id}')" class="text-indigo-400 text-xs">✏️</button>`:''}
+          ${canDel?`<button onclick="delSession('${s.id}')" class="text-rose-400 text-xs">🗑</button>`:''}</div></div>
 
-      <div class="mt-3 flex gap-2">
+      <div class="grid grid-cols-2 gap-2 mt-3">
+        <button onclick="myJoin('${s.id}')" class="py-2 rounded-xl bg-emerald-500 text-white text-sm font-bold">✅ ฉันไป</button>
+        <button onclick="myDecline('${s.id}')" class="py-2 rounded-xl bg-slate-200 text-slate-600 text-sm font-bold">❌ ไม่ว่าง</button></div>
+
+      <div class="mt-2 flex gap-2">
         <select id="join-${s.id}" class="flex-1 px-2 py-2 rounded-xl border border-slate-200 text-sm bg-white">
-          <option value="">เลือกสมาชิกเพื่อเข้าร่วม…</option>
-          ${players.filter(p=>!att.includes(p.id)).map(p=>`<option value="${p.id}">${esc(nameOf(p.id))}</option>`).join('')}
-        </select>
-        <button onclick="joinSession('${s.id}',document.getElementById('join-${s.id}').value)" class="px-4 rounded-xl bg-emerald-500 text-white text-sm font-semibold">เข้าร่วม</button>
-      </div>
-      <div class="flex gap-2 mt-2">
-        <button onclick="joinAll('${s.id}')" class="flex-1 py-1.5 rounded-xl bg-slate-100 text-slate-600 text-[11px] font-semibold">➕ เพิ่มทุกคน</button>
-        <button onclick="clearAttendees('${s.id}')" class="flex-1 py-1.5 rounded-xl bg-slate-100 text-slate-600 text-[11px] font-semibold">🧹 ล้างรายชื่อ</button>
-      </div>
+          <option value="">เลือกสมาชิก…</option>
+          ${players.map(p=>`<option value="${p.id}">${esc(nameOf(p.id))}</option>`).join('')}</select>
+        <button onclick="joinSession('${s.id}',document.getElementById('join-${s.id}').value)" class="px-3 rounded-xl bg-emerald-500 text-white text-xs font-semibold">✅</button>
+        <button onclick="declineSession('${s.id}',document.getElementById('join-${s.id}').value)" class="px-3 rounded-xl bg-rose-400 text-white text-xs font-semibold">❌</button></div>
 
-      <p class="text-xs font-bold text-emerald-600 mt-3">✅ เข้าร่วมแล้ว ${att.length} คน</p>
-      <div class="flex flex-wrap gap-1.5 mt-1.5">
-        ${att.length?att.map(id=>`<span class="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 rounded-full pl-1 pr-2 py-1 text-xs">
-          ${avatar(players.find(p=>p.id===id),'w-6 h-6')}
-          <span class="text-slate-700">${esc(nameOf(id))}</span>
-          <button onclick="leaveSession('${s.id}','${id}')" class="text-rose-400 font-bold">✕</button></span>`).join('')
-          :'<span class="text-xs text-slate-400">ยังไม่มีใครเข้าร่วม</span>'}
-      </div>
-      <button onclick="useSession('${s.id}')" class="w-full mt-3 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold">🏟️ ใช้รายชื่อนี้จัดก๊วน</button>
-    </div>`;}).join('');
-}
+      ${canEdit?`<div class="flex gap-2 mt-2">
+        <button onclick="joinAll('${s.id}')" class="flex-1 py-1.5 rounded-xl bg-slate-100 text-slate-600 text-[11px] font-semibold">➕ เพิ่มทุกคน</button>
+        <button onclick="clearAttendees('${s.id}')" class="flex-1 py-1.5 rounded-xl bg-slate-100 text-slate-600 text-[11px] font-semibold">🧹 ล้างรายชื่อ</button></div>`:''}
+
+      <p class="text-xs font-bold text-emerald-600 mt-3">✅ เข้าร่วม ${att.length} คน</p>
+      <div class="flex flex-wrap gap-1.5 mt-1.5">${att.length?att.map(id=>chip(id,'y')).join(''):'<span class="text-xs text-slate-400">ยังไม่มีใครเข้าร่วม</span>'}</div>
+      <p class="text-xs font-bold text-rose-500 mt-3">❌ ไม่เข้าร่วม ${dec.length} คน</p>
+      <div class="flex flex-wrap gap-1.5 mt-1.5">${dec.length?dec.map(id=>chip(id,'n')).join(''):'<span class="text-xs text-slate-400">—</span>'}</div>
+
+      <div class="grid grid-cols-3 gap-2 mt-3">
+        <button onclick="shareLine('${s.id}')" class="py-2 rounded-xl bg-[#06C755] text-white text-[11px] font-bold">💬 แชร์ LINE</button>
+        <button onclick="pushLine('${s.id}')" class="py-2 rounded-xl bg-slate-100 text-slate-600 text-[11px] font-semibold">📨 ส่งกลุ่ม</button>
+        <button onclick="copyText('${s.id}')" class="py-2 rounded-xl bg-slate-100 text-slate-600 text-[11px] font-semibold">📋 คัดลอก</button></div>
+      <button onclick="useSession('${s.id}')" class="w-full mt-2 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold">🏟️ ใช้รายชื่อนี้จัดก๊วน</button>
+    </div>`;}).join('');}
+
 function renderMembers(){
   const el=document.getElementById('memberCards');if(!el)return;
   if(!players.length){el.innerHTML='<p class="col-span-2 text-center text-slate-400 text-sm py-8">ยังไม่มีสมาชิก</p>';return;}
   el.innerHTML=players.map(p=>`<div class="bg-white rounded-2xl p-3 border border-slate-100 shadow-sm flex items-center gap-3 fade-in">
     ${avatar(p,'w-12 h-12')}
-    <div class="flex-1 min-w-0"><p class="font-semibold text-slate-800 text-sm truncate">${esc(nameOf(p.id))}</p>
+    <div class="flex-1 min-w-0"><p class="font-semibold text-slate-800 text-sm truncate">${esc(nameOf(p.id))}${p.ownerUid===me.uid?' <span class="text-[10px] text-indigo-400">(ฉัน)</span>':''}</p>
       <p class="text-[11px] text-slate-400 truncate">${esc([p.firstName,p.lastName].filter(Boolean).join(' ')||'-')}</p>
       <span class="text-[10px] px-2 py-0.5 rounded-full ${LV[p.level||'P'].c}">${LV[p.level||'P'].l}</span></div>
     <div class="flex flex-col gap-1 shrink-0">
-      <button onclick="editMember('${p.id}')" class="text-xs text-indigo-500">✏️</button>
-      <button onclick="delMember('${p.id}')" class="text-xs text-rose-400">🗑</button></div></div>`).join('');
-}
+      ${canEditPlayer(p)?`<button onclick="editMember('${p.id}')" class="text-xs text-indigo-500">✏️</button>`:''}
+      ${canDeletePlayer(p)?`<button onclick="delMember('${p.id}')" class="text-xs text-rose-400">🗑</button>`:''}</div></div>`).join('');}
+
 function renderSchedule(){
   const el=document.getElementById('scheduleList');if(!el)return;
   const d=document.getElementById('schDate');if(d&&!d.value)d.value=todayStr();
-  fillTime('schStartH','schStartM',document.getElementById('schStartH').value?null:'18:00');
   if(!liveState.schedule.length){el.innerHTML='<p class="text-center text-slate-400 text-sm py-6">ยังไม่มีตาราง</p>';return;}
   const rounds={};liveState.schedule.forEach(m=>{(rounds[m.round]=rounds[m.round]||[]).push(m);});
   el.innerHTML=Object.keys(rounds).sort((a,b)=>a-b).map(r=>{
@@ -964,18 +1041,15 @@ function renderSchedule(){
         <div class="min-w-0 truncate"><span class="text-[10px] text-slate-400 mr-1">สนาม ${m.court}</span>
         <span class="font-medium text-slate-700">${m.teamA.map(nameOf).join(' & ')}</span>
         <span class="text-slate-300 mx-1">vs</span><span class="font-medium text-slate-700">${m.teamB.map(nameOf).join(' & ')}</span></div>
-        <button onclick="delSchedRow('${m.id}')" class="text-slate-300 text-xs">✕</button></div>`).join('')}</div></div>`;
-  }).join('');
-}
+        <button onclick="delSchedRow('${m.id}')" class="text-slate-300 text-xs">✕</button></div>`).join('')}</div></div>`;}).join('');}
+
 function renderDateOptions(){
   const dates=[...new Set(matchHistory.map(m=>m.date))].sort((a,b)=>b.localeCompare(a));
   [['statsDate',()=>statsFilter,v=>statsFilter=v],['histDate',()=>histFilter,v=>histFilter=v]].forEach(([id,get,set])=>{
-    const sel=document.getElementById(id);if(!sel)return;
-    const cur=get();
+    const sel=document.getElementById(id);if(!sel)return;const cur=get();
     sel.innerHTML='<option value="all">📅 ทุกวัน</option>'+dates.map(d=>`<option value="${d}">${thDate(d)}</option>`).join('');
-    sel.value=dates.includes(cur)?cur:'all';set(sel.value);
-  });
-}
+    sel.value=dates.includes(cur)?cur:'all';set(sel.value);});}
+
 function renderStats(){
   const body=document.getElementById('statsBody');if(!body)return;
   const data=statsFilter==='all'?matchHistory:matchHistory.filter(m=>m.date===statsFilter);
@@ -991,31 +1065,45 @@ function renderStats(){
       <td class="py-2"><div class="flex items-center gap-2">${avatar(p,'w-8 h-8')}<span class="font-medium text-slate-700 truncate">${medal} ${esc(r.name)}</span></div></td>
       <td class="text-center text-slate-500">${r.g}</td><td class="text-center text-emerald-500 font-semibold">${r.w}</td>
       <td class="text-center text-rose-400 font-semibold">${r.l}</td><td class="text-center text-slate-500">${rt}%</td></tr>`;}).join('')
-    :'<tr><td colspan="5" class="text-center text-slate-400 py-6 text-sm">ไม่มีข้อมูล</td></tr>';
-}
+    :'<tr><td colspan="5" class="text-center text-slate-400 py-6 text-sm">ไม่มีข้อมูล</td></tr>';}
+
 function renderHistory(){
   const el=document.getElementById('historyList');if(!el)return;
   const data=histFilter==='all'?matchHistory:matchHistory.filter(m=>m.date===histFilter);
   el.innerHTML=data.length?data.map(h=>`<div class="bg-white rounded-2xl p-3 border border-slate-100 shadow-sm flex items-center justify-between gap-2">
     <div class="min-w-0">
-      <p class="text-[10px] text-slate-400">${thDate(h.date)} ${h.time||''} น.${h.court?' · สนาม '+h.court:''}${h.mode==='singles'?' · เดี่ยว':''}</p>
-      <p class="text-sm font-medium text-slate-700 truncate">${(h.teamA||[]).map(t=>esc(t.name)).join(' & ')} <span class="text-slate-300">vs</span> ${(h.teamB||[]).map(t=>esc(t.name)).join(' & ')}</p>
-    </div>
+      <p class="text-[10px] text-slate-400">${thDate(h.date)} ${h.time||''} น.${h.court?' · สนาม '+h.court:''}${h.mode==='singles'?' · เดี่ยว':''}${h.createdByName?' · โดย '+esc(h.createdByName):''}</p>
+      <p class="text-sm font-medium text-slate-700 truncate">${(h.teamA||[]).map(t=>esc(t.name)).join(' & ')} <span class="text-slate-300">vs</span> ${(h.teamB||[]).map(t=>esc(t.name)).join(' & ')}</p></div>
     <div class="flex items-center gap-2 shrink-0">
       <span class="font-bold text-slate-700">${h.scoreA}-${h.scoreB}</span>
-      <button onclick="openManual('${h.id}')" class="text-indigo-400 text-xs">✏️</button>
-      <button onclick="delMatch('${h.id}')" class="text-rose-400 text-xs">🗑</button></div></div>`).join('')
-    :'<p class="text-center text-slate-400 text-sm py-8">ไม่มีประวัติ</p>';
-}
+      ${canEditMatch(h)?`<button onclick="openManual('${h.id}')" class="text-indigo-400 text-xs">✏️</button>`:''}
+      ${canDeleteMatch(h)?`<button onclick="delMatch('${h.id}')" class="text-rose-400 text-xs">🗑</button>`:''}</div></div>`).join('')
+    :'<p class="text-center text-slate-400 text-sm py-8">ไม่มีประวัติ</p>';}
 
-/* ============ INIT ============ */
-fillTime('sesStartH','sesStartM','18:00');
-fillTime('sesEndH','sesEndM','21:00');
-fillTime('schStartH','schStartM','18:00');
-fillTime('edStartH','edStartM','18:00');
-fillTime('edEndH','edEndM','21:00');
-setInterval(()=>{const c=document.getElementById('homeClock');if(c)c.textContent=nowTime();},20000);
-go('home');
+function renderAccount(){
+  if(!me)return;
+  const box=document.getElementById('accountBox');
+  const r=ROLE[me.role]||ROLE.user;
+  if(box)box.innerHTML=`${me.photo?`<img src="${me.photo}" class="w-14 h-14 rounded-full object-cover"/>`:`<div class="w-14 h-14 rounded-full bg-indigo-200 flex items-center justify-center font-bold text-indigo-700">${esc((me.name||'U').charAt(0))}</div>`}
+    <div class="min-w-0"><p class="font-semibold text-slate-800 truncate">${esc(me.name||'ผู้ใช้')}</p>
+    <p class="text-[11px] text-slate-400 truncate">${esc(me.email||'')}</p>
+    <span class="text-[10px] px-2 py-0.5 rounded-full ${r.c} font-semibold">${r.l}</span>
+    ${me.playerId?`<span class="text-[10px] text-slate-400 ml-1">· ผูกกับ ${esc(nameOf(me.playerId))}</span>`:''}</div>`;
+  const sel=document.getElementById('linkPlayerSel');
+  if(sel)sel.innerHTML='<option value="">— ไม่ผูก —</option>'+players.map(p=>`<option value="${p.id}" ${p.id===me.playerId?'selected':''}>${esc(nameOf(p.id))}</option>`).join('');
+  const ap=document.getElementById('adminPanel');
+  if(ap){ap.classList.toggle('hidden',!isAdmin());
+    if(isAdmin()){document.getElementById('userList').innerHTML=users.map(u=>{
+      const ur=ROLE[u.role]||ROLE.user;
+      return `<div class="flex items-center gap-2 bg-slate-50 rounded-xl p-2">
+        ${u.photo?`<img src="${u.photo}" class="w-9 h-9 rounded-full object-cover"/>`:`<div class="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold">${esc((u.name||'U').charAt(0))}</div>`}
+        <div class="flex-1 min-w-0"><p class="text-sm font-semibold text-slate-700 truncate">${esc(u.name||'-')}</p>
+        <p class="text-[10px] text-slate-400 truncate">${esc(u.email||'')}</p></div>
+        <select onchange="setRole('${u.uid}',this.value)" class="px-2 py-1 rounded-lg border border-slate-200 text-[11px] bg-white">
+          <option value="user" ${u.role==='user'?'selected':''}>สมาชิก</option>
+          <option value="super" ${u.role==='super'?'selected':''}>Super</option>
+          <option value="admin" ${u.role==='admin'?'selected':''}>Admin</option></select>
+        <button onclick="delUser('${u.uid}')" class="text-rose-400 text-xs">🗑</button></div>`;}).join('');}}}
 </script>
 </body>
 </html>
