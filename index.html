@@ -10,7 +10,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
-  *{font-family:'Kanit',sans-serif;-webkit-tap-highlight-color:transparent;}
+  *{font-family:'Kanit',sans-serif;-webkit-tap-highlight-color:transparent}
   ::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-thumb{background:#c7d2fe;border-radius:9px}
   .fade-in{animation:fi .25s ease}@keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
   .noselect{user-select:none;-webkit-user-select:none}
@@ -18,22 +18,57 @@
 </head>
 <body class="bg-slate-50 min-h-screen">
 
-<!-- ========== LOGIN GATE ========== -->
-<div id="loginGate" class="fixed inset-0 z-[500] bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 flex items-center justify-center p-5">
-  <div class="bg-white rounded-3xl p-7 w-full max-w-sm shadow-2xl text-center">
-    <div class="text-5xl mb-2">🏸</div>
-    <h1 class="text-xl font-bold text-slate-800">ก๊วนแบดมินตัน</h1>
-    <p class="text-xs text-slate-400 mt-1 mb-6">เข้าสู่ระบบด้วยบัญชี Google เพื่อใช้งาน</p>
+<!-- ================= AUTH GATE ================= -->
+<div id="authGate" class="fixed inset-0 z-[500] bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 overflow-y-auto py-8 px-4">
+  <div class="max-w-sm mx-auto bg-white rounded-3xl p-6 shadow-2xl">
+    <div class="text-center mb-5">
+      <div class="text-5xl">🏸</div>
+      <h1 class="text-xl font-bold text-slate-800 mt-1">ก๊วนแบดมินตัน</h1>
+      <p class="text-[11px] text-slate-400 mt-1">ต้องสมัครสมาชิกก่อนเข้าใช้งาน</p>
+    </div>
+
+    <div class="flex bg-slate-100 rounded-2xl p-1 mb-4">
+      <button id="tabLoginBtn" onclick="authTab('login')" class="flex-1 py-2 rounded-xl text-sm font-semibold">เข้าสู่ระบบ</button>
+      <button id="tabSignupBtn" onclick="authTab('signup')" class="flex-1 py-2 rounded-xl text-sm font-semibold">สมัครสมาชิก</button>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="authLogin" class="space-y-2">
+      <input id="liEmail" type="email" placeholder="อีเมล" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm" />
+      <input id="liPass" type="password" placeholder="รหัสผ่าน" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm" />
+      <button onclick="doLogin()" class="w-full py-3 rounded-2xl bg-indigo-600 text-white font-bold text-sm">เข้าสู่ระบบ</button>
+      <button onclick="doReset()" class="w-full text-[11px] text-indigo-500 py-1">ลืมรหัสผ่าน? ส่งลิงก์รีเซ็ตทางอีเมล</button>
+    </div>
+
+    <!-- SIGNUP -->
+    <div id="authSignup" class="hidden space-y-2">
+      <input id="suNick" placeholder="ชื่อเล่น (ใช้แสดงในก๊วน) *" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm" />
+      <div class="grid grid-cols-2 gap-2">
+        <input id="suFirst" placeholder="ชื่อจริง" class="px-3 py-2.5 rounded-xl border border-slate-200 text-sm" />
+        <input id="suLast" placeholder="นามสกุล" class="px-3 py-2.5 rounded-xl border border-slate-200 text-sm" />
+      </div>
+      <select id="suLevel" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm bg-white">
+        <option value="N">🌱 มือใหม่</option><option value="S">🙂 เริ่มเก่ง</option><option value="P" selected>💪 ปานกลาง</option><option value="C">🔥 มือดี</option><option value="B">👑 เซียน</option>
+      </select>
+      <input id="suEmail" type="email" placeholder="อีเมล *" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm" />
+      <input id="suPass" type="password" placeholder="รหัสผ่าน (อย่างน้อย 6 ตัว) *" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm" />
+      <input id="suPass2" type="password" placeholder="ยืนยันรหัสผ่าน *" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm" />
+      <button onclick="doSignup()" class="w-full py-3 rounded-2xl bg-emerald-500 text-white font-bold text-sm">สมัครสมาชิก</button>
+      <p class="text-[10px] text-slate-400 text-center">1 อีเมล = 1 สมาชิก · สมัครซ้ำไม่ได้</p>
+    </div>
+
+    <div class="flex items-center gap-2 my-4"><div class="flex-1 h-px bg-slate-200"></div><span class="text-[10px] text-slate-400">หรือ</span><div class="flex-1 h-px bg-slate-200"></div></div>
+
     <button onclick="loginGoogle()" class="w-full py-3 rounded-2xl bg-white border-2 border-slate-200 text-slate-700 font-semibold text-sm flex items-center justify-center gap-2 active:scale-95 transition">
       <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.7 1.22 9.2 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 3-2.26 5.54-4.78 7.24l7.73 6c4.51-4.18 7.21-10.36 7.21-17.71z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24s.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
       เข้าสู่ระบบด้วย Google
     </button>
-    <p id="loginErr" class="text-[11px] text-rose-500 mt-3"></p>
-    <p class="text-[10px] text-slate-300 mt-5">ผู้ใช้คนแรกที่เข้าระบบจะได้สิทธิ์ผู้ดูแล (Admin) อัตโนมัติ</p>
+    <p id="authMsg" class="text-[11px] text-center mt-3 min-h-[16px]"></p>
+    <p class="text-[10px] text-slate-300 text-center mt-2">ผู้ใช้คนแรกของระบบจะได้สิทธิ์ Admin อัตโนมัติ</p>
   </div>
 </div>
 
-<!-- ========== HEADER ========== -->
+<!-- ================= HEADER ================= -->
 <header class="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-slate-100">
   <div class="max-w-4xl mx-auto px-3 py-3 flex items-center gap-2">
     <button id="backBtn" onclick="go('home')" class="hidden w-9 h-9 rounded-xl bg-slate-100 text-slate-600 font-bold shrink-0">‹</button>
@@ -48,9 +83,8 @@
 
 <div class="max-w-4xl mx-auto px-3 pb-24 pt-4">
 
-<!-- ========== HOME ========== -->
+<!-- ================= HOME ================= -->
 <section id="page-home">
-  <!-- นัดหมายเด่นบนสุด -->
   <div class="rounded-3xl bg-gradient-to-br from-indigo-600 to-violet-700 text-white p-5 mb-4 shadow-xl">
     <div class="flex items-center justify-between mb-2">
       <p class="text-xs opacity-80 font-semibold">📣 นัดตีที่กำลังจะถึง</p>
@@ -84,7 +118,7 @@
       <div class="w-12 h-12 mx-auto rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center text-2xl">📺</div>
       <p class="text-xs font-semibold text-slate-700 mt-2">สกอร์บอร์ด</p></button>
     <button onclick="go('members')" class="bg-white rounded-2xl p-3 shadow-sm border border-slate-100 active:scale-95 transition">
-      <div class="w-12 h-12 mx-auto rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-2xl">👤</div>
+      <div class="w-12 h-12 mx-auto rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-2xl">👥</div>
       <p class="text-xs font-semibold text-slate-700 mt-2">สมาชิก</p></button>
     <button onclick="go('schedule')" class="bg-white rounded-2xl p-3 shadow-sm border border-slate-100 active:scale-95 transition">
       <div class="w-12 h-12 mx-auto rounded-2xl bg-sky-100 text-sky-600 flex items-center justify-center text-2xl">📋</div>
@@ -101,7 +135,7 @@
   </div>
 </section>
 
-<!-- ========== COURTS ========== -->
+<!-- ================= COURTS ================= -->
 <section id="page-courts" class="hidden space-y-4">
   <button onclick="go('home')" class="w-full py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-600 font-semibold text-sm shadow-sm">🏠 กลับหน้าหลัก</button>
   <div id="courtSessionBanner" class="hidden rounded-2xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-700"></div>
@@ -109,8 +143,7 @@
     <div><p class="text-sm font-semibold text-slate-600 mb-2">🎮 โหมด</p>
       <div class="flex gap-2">
         <button onclick="setMode('doubles')" id="mode-doubles" class="flex-1 py-2 rounded-xl text-sm font-semibold">👥 คู่ 2v2</button>
-        <button onclick="setMode('singles')" id="mode-singles" class="flex-1 py-2 rounded-xl text-sm font-semibold">🧍 เดี่ยว 1v1</button>
-      </div></div>
+        <button onclick="setMode('singles')" id="mode-singles" class="flex-1 py-2 rounded-xl text-sm font-semibold">🧍 เดี่ยว 1v1</button></div></div>
     <div><p class="text-sm font-semibold text-slate-600 mb-2">🏟️ จำนวนสนาม</p><div class="flex gap-2" id="courtCountBtns"></div></div>
     <div><p class="text-sm font-semibold text-slate-600 mb-2">🎯 แต้มจบเกม</p>
       <select onchange="setGamePoint(this.value)" id="gamePointSel" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm bg-white">
@@ -120,59 +153,49 @@
   <div id="courtsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
   <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
     <p class="font-bold text-slate-700 text-sm mb-2">🕒 คิวรอ (<span id="waitCount">0</span>)</p>
-    <div id="waitList" class="flex flex-wrap gap-2"></div>
-  </div>
+    <div id="waitList" class="flex flex-wrap gap-2"></div></div>
 </section>
 
-<!-- ========== SCOREBOARD ========== -->
+<!-- ================= SCOREBOARD ================= -->
 <section id="page-scoreboard" class="hidden space-y-4">
   <button onclick="go('home')" class="w-full py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-600 font-semibold text-sm shadow-sm">🏠 กลับหน้าหลัก</button>
   <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
     <p class="text-sm font-semibold text-slate-600 mb-2">เลือกสนามที่จะคุมสกอร์ (แต่ละสนามแยกข้อมูลกัน)</p>
     <div class="flex gap-2 flex-wrap" id="sbCourtBtns"></div>
-    <p class="text-[11px] text-slate-400 mt-2">💡 เครื่องที่ 1 เลือกสนาม 1, เครื่องที่ 2 เลือกสนาม 2 — บันทึกไม่ทับกัน</p>
-  </div>
+    <p class="text-[11px] text-slate-400 mt-2">💡 เครื่องที่ 1 เลือกสนาม 1, เครื่องที่ 2 เลือกสนาม 2 — บันทึกไม่ทับกัน</p></div>
   <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm space-y-3">
     <div class="flex gap-2">
       <button onclick="setBoardMode('doubles')" id="sbmode-doubles" class="flex-1 py-2 rounded-xl text-sm font-semibold">👥 คู่</button>
       <button onclick="setBoardMode('singles')" id="sbmode-singles" class="flex-1 py-2 rounded-xl text-sm font-semibold">🧍 เดี่ยว</button>
       <select id="sbGamePoint" onchange="patchBoard({gamePoint:parseInt(this.value)})" class="px-3 rounded-xl border border-slate-200 text-sm bg-white">
-        <option value="11">11</option><option value="15">15</option><option value="21">21</option><option value="25">25</option></select>
-    </div>
+        <option value="11">11</option><option value="15">15</option><option value="21">21</option><option value="25">25</option></select></div>
     <div class="grid grid-cols-2 gap-3">
       <div class="space-y-2"><p class="text-xs font-bold text-indigo-500">ฝั่ง A</p>
         <input id="sbNameA" onchange="patchBoard({teamAName:this.value})" placeholder="ชื่อทีม (ไม่บังคับ)" class="w-full px-2 py-2 rounded-xl border border-slate-200 text-sm" />
         <div id="sbPlayersA" class="space-y-2"></div></div>
       <div class="space-y-2"><p class="text-xs font-bold text-rose-500">ฝั่ง B</p>
         <input id="sbNameB" onchange="patchBoard({teamBName:this.value})" placeholder="ชื่อทีม (ไม่บังคับ)" class="w-full px-2 py-2 rounded-xl border border-slate-200 text-sm" />
-        <div id="sbPlayersB" class="space-y-2"></div></div>
-    </div>
-    <button onclick="pullFromCourt()" class="w-full py-2 rounded-xl bg-slate-100 text-slate-600 text-xs font-semibold">⬇ ดึงรายชื่อจากสนามนี้</button>
-  </div>
+        <div id="sbPlayersB" class="space-y-2"></div></div></div>
+    <button onclick="pullFromCourt()" class="w-full py-2 rounded-xl bg-slate-100 text-slate-600 text-xs font-semibold">⬇ ดึงรายชื่อจากสนามนี้</button></div>
   <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
     <div class="grid grid-cols-2 gap-3 text-center">
       <div class="rounded-2xl bg-indigo-50 p-3">
         <div id="mini-facesA" class="flex justify-center gap-1 mb-1"></div>
         <p id="mini-nameA" class="text-xs font-semibold text-indigo-600 truncate">ทีม A</p>
         <p id="mini-scoreA" class="text-5xl font-black text-indigo-700">0</p>
-        <div class="flex gap-2 mt-2"><button onclick="bumpScore('A',-1)" class="flex-1 py-2 rounded-xl bg-white text-slate-500 font-bold">−</button><button onclick="bumpScore('A',1)" class="flex-1 py-2 rounded-xl bg-indigo-600 text-white font-bold">+</button></div>
-      </div>
+        <div class="flex gap-2 mt-2"><button onclick="bumpScore('A',-1)" class="flex-1 py-2 rounded-xl bg-white text-slate-500 font-bold">−</button><button onclick="bumpScore('A',1)" class="flex-1 py-2 rounded-xl bg-indigo-600 text-white font-bold">+</button></div></div>
       <div class="rounded-2xl bg-rose-50 p-3">
         <div id="mini-facesB" class="flex justify-center gap-1 mb-1"></div>
         <p id="mini-nameB" class="text-xs font-semibold text-rose-600 truncate">ทีม B</p>
         <p id="mini-scoreB" class="text-5xl font-black text-rose-700">0</p>
-        <div class="flex gap-2 mt-2"><button onclick="bumpScore('B',-1)" class="flex-1 py-2 rounded-xl bg-white text-slate-500 font-bold">−</button><button onclick="bumpScore('B',1)" class="flex-1 py-2 rounded-xl bg-rose-600 text-white font-bold">+</button></div>
-      </div>
-    </div>
+        <div class="flex gap-2 mt-2"><button onclick="bumpScore('B',-1)" class="flex-1 py-2 rounded-xl bg-white text-slate-500 font-bold">−</button><button onclick="bumpScore('B',1)" class="flex-1 py-2 rounded-xl bg-rose-600 text-white font-bold">+</button></div></div></div>
     <div class="grid grid-cols-3 gap-2 mt-3">
       <button onclick="openFs()" class="py-3 rounded-2xl bg-slate-800 text-white font-bold text-sm">⛶ เต็มจอ</button>
       <button onclick="resetBoard()" class="py-3 rounded-2xl bg-slate-100 text-slate-600 font-semibold text-sm">↺ รีเซ็ต</button>
-      <button onclick="saveBoardMatch()" class="py-3 rounded-2xl bg-emerald-500 text-white font-bold text-sm">💾 บันทึก</button>
-    </div>
-  </div>
+      <button onclick="saveBoardMatch()" class="py-3 rounded-2xl bg-emerald-500 text-white font-bold text-sm">💾 บันทึก</button></div></div>
 </section>
 
-<!-- ========== SESSIONS ========== -->
+<!-- ================= SESSIONS ================= -->
 <section id="page-sessions" class="hidden space-y-4">
   <button onclick="go('home')" class="w-full py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-600 font-semibold text-sm shadow-sm">🏠 กลับหน้าหลัก</button>
   <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
@@ -188,43 +211,51 @@
       <div><label class="text-[11px] text-slate-400">เลิก (24 ชม.)</label>
         <div class="flex items-center gap-1"><select id="sesEndH" class="flex-1 px-2 py-2 rounded-xl border border-slate-200 text-sm bg-white"></select><span class="text-slate-400">:</span><select id="sesEndM" class="flex-1 px-2 py-2 rounded-xl border border-slate-200 text-sm bg-white"></select></div></div>
       <div class="col-span-2"><label class="text-[11px] text-slate-400">หมายเหตุ</label>
-        <input id="sesNote" placeholder="เช่น หัวละ 80 บาท" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm" /></div>
-    </div>
-    <button onclick="createSession()" class="w-full mt-3 bg-indigo-600 text-white font-bold py-3 rounded-2xl">สร้างนัด</button>
-  </div>
+        <input id="sesNote" placeholder="เช่น หัวละ 80 บาท" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm" /></div></div>
+    <button onclick="createSession()" class="w-full mt-3 bg-indigo-600 text-white font-bold py-3 rounded-2xl">สร้างนัด</button></div>
   <div id="sessionList" class="space-y-3"></div>
 </section>
 
-<!-- ========== MEMBERS ========== -->
+<!-- ================= MEMBERS ================= -->
 <section id="page-members" class="hidden space-y-4">
   <button onclick="go('home')" class="w-full py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-600 font-semibold text-sm shadow-sm">🏠 กลับหน้าหลัก</button>
-  <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
-    <p class="font-bold text-slate-700 mb-3" id="mFormTitle">➕ เพิ่มสมาชิก</p>
-    <div class="flex gap-4">
-      <div class="flex flex-col items-center gap-1">
-        <img id="mPhotoPrev" class="w-20 h-20 rounded-full object-cover border-4 border-indigo-100 hidden" />
-        <div id="mPhotoHolder" class="w-20 h-20 rounded-full bg-indigo-50 border-4 border-indigo-100 flex items-center justify-center text-2xl text-indigo-300">📷</div>
-        <input id="mPhoto" type="file" accept="image/*" onchange="onPhoto(event)" class="text-[9px] w-20" />
-        <button onclick="clearPhoto()" class="text-[10px] text-rose-400">ลบรูป</button>
+
+  <div class="bg-white rounded-2xl p-5 border-2 border-indigo-100 shadow-sm">
+    <p class="font-bold text-slate-700 mb-4" id="mFormTitle">🙋 โปรไฟล์ของฉัน</p>
+    <div class="flex flex-col items-center gap-3">
+      <div class="relative">
+        <img id="mPhotoPrev" class="w-28 h-28 rounded-full object-cover border-4 border-indigo-200 hidden" />
+        <div id="mPhotoHolder" class="w-28 h-28 rounded-full border-4 border-indigo-200 flex items-center justify-center text-5xl"></div>
       </div>
-      <div class="flex-1 space-y-2">
-        <input id="mNick" placeholder="ชื่อเล่น (ใช้แสดงผล)" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm" />
+      <div class="flex gap-2">
+        <label class="px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-600 text-xs font-semibold cursor-pointer">
+          📷 เลือกรูป<input id="mPhoto" type="file" accept="image/*" onchange="onPhoto(event)" class="hidden" /></label>
+        <button onclick="clearPhoto()" class="px-3 py-1.5 rounded-xl bg-rose-50 text-rose-500 text-xs font-semibold">ลบรูป</button>
+      </div>
+      <div class="w-full space-y-2 mt-1">
+        <input id="mNick" placeholder="ชื่อเล่น (ใช้แสดงผล)" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm" />
         <div class="grid grid-cols-2 gap-2">
-          <input id="mFirst" placeholder="ชื่อจริง" class="px-3 py-2 rounded-xl border border-slate-200 text-sm" />
-          <input id="mLast" placeholder="นามสกุล" class="px-3 py-2 rounded-xl border border-slate-200 text-sm" /></div>
-        <select id="mLevel" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white">
-          <option value="N">🌱 มือใหม่</option><option value="S">🙂 เริ่มเก่ง</option><option value="P" selected>💪 ปานกลาง</option><option value="C">🔥 มือดี</option><option value="B">👑 เซียน</option></select>
-        <label class="flex items-center gap-2 text-[11px] text-slate-500"><input type="checkbox" id="mLinkMe" /> ผูกโปรไฟล์นี้กับบัญชีของฉัน</label>
+          <input id="mFirst" placeholder="ชื่อจริง" class="px-3 py-2.5 rounded-xl border border-slate-200 text-sm" />
+          <input id="mLast" placeholder="นามสกุล" class="px-3 py-2.5 rounded-xl border border-slate-200 text-sm" /></div>
+        <select id="mLevel" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm bg-white">
+          <option value="N">🌱 มือใหม่</option><option value="S">🙂 เริ่มเก่ง</option><option value="P">💪 ปานกลาง</option><option value="C">🔥 มือดี</option><option value="B">👑 เซียน</option></select>
         <div class="flex gap-2">
-          <button onclick="saveMember()" id="mSaveBtn" class="flex-1 bg-indigo-600 text-white font-semibold py-2.5 rounded-xl text-sm">บันทึก</button>
+          <button onclick="saveMember()" class="flex-1 bg-indigo-600 text-white font-semibold py-3 rounded-xl text-sm">บันทึกโปรไฟล์</button>
           <button onclick="resetMemberForm()" id="mCancelBtn" class="hidden px-4 bg-slate-100 text-slate-500 rounded-xl text-sm">ยกเลิก</button></div>
       </div>
     </div>
   </div>
-  <div id="memberCards" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+
+  <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+    <div class="flex items-center justify-between mb-3">
+      <p class="font-bold text-slate-700">👥 สมาชิกในก๊วน (<span id="memCount">0</span>)</p>
+      <button id="addGuestBtn" onclick="addGuest()" class="hidden text-[11px] px-2.5 py-1.5 rounded-xl bg-slate-100 text-slate-600 font-semibold">➕ เพิ่มสมาชิกไม่มีบัญชี</button>
+    </div>
+    <div id="memberCards" class="grid grid-cols-2 sm:grid-cols-3 gap-3"></div>
+  </div>
 </section>
 
-<!-- ========== SCHEDULE ========== -->
+<!-- ================= SCHEDULE ================= -->
 <section id="page-schedule" class="hidden space-y-4">
   <button onclick="go('home')" class="w-full py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-600 font-semibold text-sm shadow-sm">🏠 กลับหน้าหลัก</button>
   <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
@@ -237,16 +268,14 @@
       <div><label class="text-[11px] text-slate-400">นาที/แมตช์</label><input id="schMin" type="number" value="15" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm" /></div>
       <div><label class="text-[11px] text-slate-400">จำนวนสนาม</label>
         <select id="schCourts" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white"><option>1</option><option selected>2</option><option>3</option><option>4</option></select></div>
-      <div class="col-span-2"><label class="text-[11px] text-slate-400">จำนวนแมตช์</label><input id="schCount" type="number" value="10" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm" /></div>
-    </div>
+      <div class="col-span-2"><label class="text-[11px] text-slate-400">จำนวนแมตช์</label><input id="schCount" type="number" value="10" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm" /></div></div>
     <div class="flex gap-2 mt-3">
       <button onclick="genSchedule()" class="flex-1 bg-indigo-600 text-white font-bold py-3 rounded-2xl text-sm">สร้างตาราง</button>
-      <button onclick="clearSchedule()" class="px-4 bg-slate-100 text-slate-500 rounded-2xl text-sm">ล้าง</button></div>
-  </div>
+      <button onclick="clearSchedule()" class="px-4 bg-slate-100 text-slate-500 rounded-2xl text-sm">ล้าง</button></div></div>
   <div id="scheduleList" class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm"></div>
 </section>
 
-<!-- ========== STATS ========== -->
+<!-- ================= STATS ================= -->
 <section id="page-stats" class="hidden space-y-4">
   <button onclick="go('home')" class="w-full py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-600 font-semibold text-sm shadow-sm">🏠 กลับหน้าหลัก</button>
   <div class="bg-white rounded-2xl p-3 border border-slate-100 shadow-sm">
@@ -257,7 +286,7 @@
       <tbody id="statsBody"></tbody></table></div>
 </section>
 
-<!-- ========== HISTORY ========== -->
+<!-- ================= HISTORY ================= -->
 <section id="page-history" class="hidden space-y-4">
   <button onclick="go('home')" class="w-full py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-600 font-semibold text-sm shadow-sm">🏠 กลับหน้าหลัก</button>
   <div class="bg-white rounded-2xl p-3 border border-slate-100 shadow-sm flex gap-2">
@@ -266,50 +295,43 @@
   <div id="historyList" class="space-y-2"></div>
 </section>
 
-<!-- ========== ACCOUNT / SETTINGS ========== -->
+<!-- ================= ACCOUNT ================= -->
 <section id="page-account" class="hidden space-y-4">
   <button onclick="go('home')" class="w-full py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-600 font-semibold text-sm shadow-sm">🏠 กลับหน้าหลัก</button>
-
   <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
     <p class="font-bold text-slate-700 mb-3">👤 บัญชีของฉัน</p>
     <div id="accountBox" class="flex items-center gap-3"></div>
     <div class="grid grid-cols-2 gap-2 mt-4">
-      <button onclick="logout()" class="py-2.5 rounded-xl bg-rose-50 text-rose-500 font-semibold text-sm">ออกจากระบบ</button>
-      <button onclick="askNotify()" class="py-2.5 rounded-xl bg-slate-100 text-slate-600 font-semibold text-sm">🔔 เปิดแจ้งเตือน</button>
-    </div>
-    <div class="mt-3">
-      <label class="text-[11px] text-slate-400">ผูกกับโปรไฟล์สมาชิก (เพื่อกดเข้าร่วมนัดในชื่อตัวเอง)</label>
-      <select id="linkPlayerSel" onchange="linkPlayer(this.value)" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white mt-1"></select>
-    </div>
+      <button onclick="go('members')" class="py-2.5 rounded-xl bg-indigo-50 text-indigo-600 font-semibold text-sm">✏️ แก้ไขโปรไฟล์</button>
+      <button onclick="askNotify()" class="py-2.5 rounded-xl bg-slate-100 text-slate-600 font-semibold text-sm">🔔 เปิดแจ้งเตือน</button></div>
+    <div class="grid grid-cols-2 gap-2 mt-2">
+      <button onclick="changePass()" class="py-2.5 rounded-xl bg-slate-100 text-slate-600 font-semibold text-sm">🔑 เปลี่ยนรหัสผ่าน</button>
+      <button onclick="logout()" class="py-2.5 rounded-xl bg-rose-50 text-rose-500 font-semibold text-sm">ออกจากระบบ</button></div>
   </div>
 
   <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
-    <p class="font-bold text-slate-700 mb-1">💬 แจ้งเตือนเข้า LINE</p>
-    <p class="text-[11px] text-slate-400 mb-3">วิธีง่ายสุด: กด "แชร์ไป LINE" แล้วเลือกกลุ่มปลายทาง · ถ้าตั้ง Webhook ไว้จะส่งอัตโนมัติได้</p>
-    <label class="text-[11px] text-slate-400">LINE Webhook URL (ไม่บังคับ)</label>
-    <input id="lineHook" placeholder="https://... (Apps Script / Cloud Function)" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm mb-2" />
+    <p class="font-bold text-slate-700 mb-1">💬 แจ้งเตือนเข้า LINE กลุ่ม</p>
+    <p class="text-[11px] text-slate-400 mb-3">ใส่ Webhook URL (Google Apps Script) เพื่อให้ปุ่ม "ส่งเข้ากลุ่ม" ทำงานอัตโนมัติ</p>
+    <input id="lineHook" placeholder="https://script.google.com/macros/s/..." class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm mb-2" />
     <button onclick="saveSettings()" class="w-full py-2.5 rounded-xl bg-indigo-600 text-white font-semibold text-sm">บันทึกการตั้งค่า</button>
-    <p class="text-[10px] text-slate-400 mt-2">⏰ ระบบจะเตือนล่วงหน้า 60 นาทีก่อนถึงเวลานัด (ต้องเปิดแอปค้างไว้ + อนุญาตการแจ้งเตือน)</p>
-  </div>
+    <p class="text-[10px] text-slate-400 mt-2">⏰ ระบบเตือนล่วงหน้า 60 นาทีก่อนถึงเวลานัด (ต้องเปิดแอปค้าง + อนุญาตแจ้งเตือน)</p></div>
 
   <div id="adminPanel" class="hidden bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
-    <p class="font-bold text-slate-700 mb-1">🛡️ จัดการผู้ใช้ (เฉพาะ Admin)</p>
-    <p class="text-[11px] text-slate-400 mb-3">ปรับระดับสิทธิ์ / ลบผู้ใช้ออกจากระบบ</p>
-    <div id="userList" class="space-y-2"></div>
-  </div>
+    <p class="font-bold text-slate-700 mb-1">🛡️ จัดการผู้ใช้ (Admin)</p>
+    <p class="text-[11px] text-slate-400 mb-3">ปรับสิทธิ์ · ผูกโปรไฟล์ · ลบผู้ใช้ (ลบแล้วอีเมลนั้นสมัครใหม่ได้)</p>
+    <div id="userList" class="space-y-2"></div></div>
 </section>
 
 </div>
 
-<!-- ========== FULLSCREEN SCOREBOARD ========== -->
+<!-- ================= FULLSCREEN SCOREBOARD ================= -->
 <div id="fsBoard" class="hidden fixed inset-0 z-[300] bg-slate-900 text-white noselect">
   <div class="absolute top-2 left-3 right-3 flex justify-between items-center z-20 text-xs">
     <span id="fsInfo" class="opacity-70 truncate"></span>
     <div class="flex gap-2 shrink-0">
       <button onclick="fsSwap()" class="px-3 py-1.5 bg-white/10 rounded-lg">🔁 สลับ</button>
       <button onclick="resetBoard()" class="px-3 py-1.5 bg-white/10 rounded-lg">↺ รีเซ็ต</button>
-      <button onclick="closeFs()" class="px-3 py-1.5 bg-white/10 rounded-lg">✕ ปิด</button></div>
-  </div>
+      <button onclick="closeFs()" class="px-3 py-1.5 bg-white/10 rounded-lg">✕ ปิด</button></div></div>
   <div class="grid grid-cols-2 h-full">
     <div class="relative flex flex-col items-center justify-center bg-indigo-600 px-2 pt-10 pb-24">
       <div id="fsFacesA" class="flex gap-2 justify-center mb-1"></div>
@@ -317,21 +339,18 @@
       <p id="fsScoreA" onclick="bumpScore('A',1)" class="text-[22vw] leading-none font-black cursor-pointer">0</p>
       <div class="absolute bottom-16 left-0 right-0 flex justify-center gap-5">
         <button onclick="bumpScore('A',-1)" class="w-20 h-20 rounded-full bg-black/30 text-4xl font-bold active:scale-90 transition">−</button>
-        <button onclick="bumpScore('A',1)" class="w-20 h-20 rounded-full bg-white/25 text-4xl font-bold active:scale-90 transition">+</button></div>
-    </div>
+        <button onclick="bumpScore('A',1)" class="w-20 h-20 rounded-full bg-white/25 text-4xl font-bold active:scale-90 transition">+</button></div></div>
     <div class="relative flex flex-col items-center justify-center bg-rose-600 px-2 pt-10 pb-24">
       <div id="fsFacesB" class="flex gap-2 justify-center mb-1"></div>
       <p id="fsNameB" class="text-[2.6vw] sm:text-base font-semibold text-center opacity-90 truncate w-full px-2"></p>
       <p id="fsScoreB" onclick="bumpScore('B',1)" class="text-[22vw] leading-none font-black cursor-pointer">0</p>
       <div class="absolute bottom-16 left-0 right-0 flex justify-center gap-5">
         <button onclick="bumpScore('B',-1)" class="w-20 h-20 rounded-full bg-black/30 text-4xl font-bold active:scale-90 transition">−</button>
-        <button onclick="bumpScore('B',1)" class="w-20 h-20 rounded-full bg-white/25 text-4xl font-bold active:scale-90 transition">+</button></div>
-    </div>
-  </div>
+        <button onclick="bumpScore('B',1)" class="w-20 h-20 rounded-full bg-white/25 text-4xl font-bold active:scale-90 transition">+</button></div></div></div>
   <button onclick="saveBoardMatch()" class="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 bg-emerald-500 px-8 py-3 rounded-2xl font-bold shadow-xl">💾 บันทึกผล</button>
 </div>
 
-<!-- ========== MODALS ========== -->
+<!-- ================= MODALS ================= -->
 <div id="endModal" class="hidden fixed inset-0 bg-black/50 z-[200] items-center justify-center p-4">
   <div class="bg-white rounded-2xl w-full max-w-sm p-5">
     <h3 class="font-bold text-slate-800 mb-3">🏁 จบแมตช์ สนาม <span id="endCourtNo"></span></h3>
@@ -344,9 +363,7 @@
     <div class="space-y-2 mt-4">
       <button onclick="confirmEnd(true)" class="w-full bg-emerald-500 text-white py-2.5 rounded-xl font-semibold text-sm">บันทึกสกอร์ & จบแมตช์</button>
       <button onclick="confirmEnd(false)" class="w-full bg-slate-100 text-slate-600 py-2.5 rounded-xl font-semibold text-sm">จบโดยไม่บันทึก</button>
-      <button onclick="closeModal('endModal')" class="w-full text-slate-400 text-xs py-1">ยกเลิก</button></div>
-  </div>
-</div>
+      <button onclick="closeModal('endModal')" class="w-full text-slate-400 text-xs py-1">ยกเลิก</button></div></div></div>
 
 <div id="manualModal" class="hidden fixed inset-0 bg-black/50 z-[200] items-center justify-center p-4">
   <div class="bg-white rounded-2xl w-full max-w-sm p-5 max-h-[90vh] overflow-y-auto">
@@ -360,9 +377,7 @@
     <div class="flex gap-2"><input id="manScoreA" type="number" placeholder="สกอร์ A" class="flex-1 px-3 py-2 rounded-xl border text-sm" />
       <input id="manScoreB" type="number" placeholder="สกอร์ B" class="flex-1 px-3 py-2 rounded-xl border text-sm" /></div>
     <button onclick="saveManual()" class="w-full mt-4 bg-indigo-600 text-white py-2.5 rounded-xl font-semibold text-sm">บันทึก</button>
-    <button onclick="closeModal('manualModal')" class="w-full text-slate-400 text-xs py-2">ยกเลิก</button>
-  </div>
-</div>
+    <button onclick="closeModal('manualModal')" class="w-full text-slate-400 text-xs py-2">ยกเลิก</button></div></div>
 
 <div id="sesEditModal" class="hidden fixed inset-0 bg-black/50 z-[200] items-center justify-center p-4">
   <div class="bg-white rounded-2xl w-full max-w-sm p-5 max-h-[90vh] overflow-y-auto">
@@ -376,16 +391,13 @@
       <div><label class="text-[11px] text-slate-400">เริ่ม</label>
         <div class="flex items-center gap-1"><select id="edStartH" class="flex-1 px-2 py-2 rounded-xl border text-sm bg-white"></select>:<select id="edStartM" class="flex-1 px-2 py-2 rounded-xl border text-sm bg-white"></select></div></div>
       <div><label class="text-[11px] text-slate-400">เลิก</label>
-        <div class="flex items-center gap-1"><select id="edEndH" class="flex-1 px-2 py-2 rounded-xl border text-sm bg-white"></select>:<select id="edEndM" class="flex-1 px-2 py-2 rounded-xl border text-sm bg-white"></select></div></div>
-    </div>
+        <div class="flex items-center gap-1"><select id="edEndH" class="flex-1 px-2 py-2 rounded-xl border text-sm bg-white"></select>:<select id="edEndM" class="flex-1 px-2 py-2 rounded-xl border text-sm bg-white"></select></div></div></div>
     <label class="text-[11px] text-slate-400 mt-2 block">หมายเหตุ</label>
     <input id="edNote" class="w-full px-3 py-2 rounded-xl border text-sm" />
     <button onclick="saveSessionEdit()" class="w-full mt-4 bg-indigo-600 text-white py-2.5 rounded-xl font-semibold text-sm">บันทึกการแก้ไข</button>
-    <button onclick="closeModal('sesEditModal')" class="w-full text-slate-400 text-xs py-2">ยกเลิก</button>
-  </div>
-</div>
+    <button onclick="closeModal('sesEditModal')" class="w-full text-slate-400 text-xs py-2">ยกเลิก</button></div></div>
 
-<div id="toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-sm px-5 py-2.5 rounded-full shadow-xl z-[400]"></div>
+<div id="toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-sm px-5 py-2.5 rounded-full shadow-xl z-[600]"></div>
 
 <script>
 /* ============ FIREBASE ============ */
@@ -408,8 +420,8 @@ let editingMember=null,photoData=null,photoRemove=false,endCtx=null,editingMatch
 
 const LV={N:{l:'มือใหม่',c:'bg-slate-100 text-slate-600',r:1},S:{l:'เริ่มเก่ง',c:'bg-blue-100 text-blue-600',r:2},P:{l:'ปานกลาง',c:'bg-green-100 text-green-600',r:3},C:{l:'มือดี',c:'bg-orange-100 text-orange-600',r:4},B:{l:'เซียน',c:'bg-purple-100 text-purple-600',r:5}};
 const ROLE={user:{l:'สมาชิก',c:'bg-slate-100 text-slate-600'},super:{l:'Super',c:'bg-amber-100 text-amber-700'},admin:{l:'Admin',c:'bg-rose-100 text-rose-600'}};
-const CATS=['😺','😸','😹','😻','😼','😽','🙀','😿','😾','🐱','🐈','🐯'];
-function catFor(id){let s=0;for(const ch of String(id||'x'))s+=ch.charCodeAt(0);return CATS[s%CATS.length];}
+const ANIMALS=[['🐱','bg-amber-100'],['🦊','bg-orange-100'],['🐼','bg-slate-100'],['🐨','bg-stone-100'],['🐵','bg-yellow-100'],['🦁','bg-amber-200'],['🐯','bg-orange-200'],['🐸','bg-lime-100'],['🐧','bg-sky-100'],['🐙','bg-pink-100'],['🦉','bg-amber-100'],['🐺','bg-slate-200'],['🐮','bg-rose-100'],['🐷','bg-pink-200'],['🐔','bg-yellow-200'],['🦄','bg-fuchsia-100'],['🐹','bg-orange-100'],['🐰','bg-rose-100'],['🦝','bg-neutral-200'],['🐻','bg-amber-200'],['🐲','bg-emerald-100'],['🦖','bg-green-100'],['🐢','bg-teal-100'],['🦧','bg-orange-100']];
+function animalFor(id){let s=0;for(const ch of String(id||'x'))s=(s*31+ch.charCodeAt(0))>>>0;return ANIMALS[s%ANIMALS.length];}
 
 function defaultLive(){return{courtCount:2,matchMode:'doubles',gamePoint:21,activeSessionId:null,
   courts:[1,2].map(id=>({id,teamA:[null,null],teamB:[null,null],status:'empty'})),schedule:[],partnerHistory:{}};}
@@ -425,15 +437,18 @@ function nowTime(){const d=new Date();return String(d.getHours()).padStart(2,'0'
 function nameOf(id){const p=players.find(x=>x.id===id);return p?(p.nickname||[p.firstName,p.lastName].filter(Boolean).join(' ')||'ไม่มีชื่อ'):'—';}
 function thDate(d){if(!d)return'-';const[y,m,dd]=d.split('-');const M=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];return`${+dd} ${M[+m-1]} ${+y+543}`;}
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
-function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.remove('hidden');clearTimeout(window._t);window._t=setTimeout(()=>t.classList.add('hidden'),2400);}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.remove('hidden');clearTimeout(window._t);window._t=setTimeout(()=>t.classList.add('hidden'),2600);}
 function closeModal(id){const e=document.getElementById(id);e.classList.add('hidden');e.classList.remove('flex');}
 function openModal(id){const e=document.getElementById(id);e.classList.remove('hidden');e.classList.add('flex');}
-function avatar(p,sz='w-9 h-9'){if(p&&p.photo)return`<img src="${p.photo}" class="${sz} rounded-full object-cover shrink-0"/>`;
-  return`<div class="${sz} rounded-full bg-amber-100 flex items-center justify-center shrink-0 text-lg">${catFor(p?p.id:'x')}</div>`;}
-function bigFace(id,sz='w-[9vw] h-[9vw] max-w-20 max-h-20 min-w-12 min-h-12'){
+function avatar(p,sz='w-10 h-10',txt='text-xl'){
+  if(p&&p.photo)return`<img src="${p.photo}" class="${sz} rounded-full object-cover shrink-0 border-2 border-white shadow-sm"/>`;
+  const[em,bg]=animalFor(p?p.id:'x');
+  return`<div class="${sz} ${bg} rounded-full flex items-center justify-center shrink-0 ${txt} border-2 border-white shadow-sm">${em}</div>`;}
+function bigFace(id,sz='w-[10vw] h-[10vw] max-w-24 max-h-24 min-w-14 min-h-14'){
   const p=players.find(x=>x.id===id);
-  if(p&&p.photo)return`<img src="${p.photo}" class="${sz} rounded-full object-cover border-2 border-white/60 shadow"/>`;
-  return`<div class="${sz} rounded-full bg-white/25 border-2 border-white/40 flex items-center justify-center text-[5vw] sm:text-3xl shadow">${catFor(id||'x')}</div>`;}
+  if(p&&p.photo)return`<img src="${p.photo}" class="${sz} rounded-full object-cover border-[3px] border-white/70 shadow-lg"/>`;
+  const[em]=animalFor(id||'x');
+  return`<div class="${sz} rounded-full bg-white/25 border-[3px] border-white/50 flex items-center justify-center text-[6vw] sm:text-4xl shadow-lg">${em}</div>`;}
 function fillTime(hId,mId,val){
   const h=document.getElementById(hId),m=document.getElementById(mId);if(!h||!m)return;
   if(!h.options.length)h.innerHTML=Array.from({length:24},(_,i)=>`<option value="${String(i).padStart(2,'0')}">${String(i).padStart(2,'0')}</option>`).join('');
@@ -441,34 +456,113 @@ function fillTime(hId,mId,val){
   if(val){const[a,b]=val.split(':');h.value=a;m.value=(Math.round(+b/5)*5+'').padStart(2,'0');}}
 function readTime(hId,mId){const h=document.getElementById(hId),m=document.getElementById(mId);return (h?h.value:'00')+':'+(m?m.value:'00');}
 
-/* ============ AUTH & ROLES ============ */
+/* ============ AUTH ============ */
+function authTab(t){
+  document.getElementById('authLogin').classList.toggle('hidden',t!=='login');
+  document.getElementById('authSignup').classList.toggle('hidden',t!=='signup');
+  document.getElementById('tabLoginBtn').className='flex-1 py-2 rounded-xl text-sm font-semibold '+(t==='login'?'bg-white shadow text-indigo-600':'text-slate-500');
+  document.getElementById('tabSignupBtn').className='flex-1 py-2 rounded-xl text-sm font-semibold '+(t==='signup'?'bg-white shadow text-indigo-600':'text-slate-500');
+  authMsg('');}
+function authMsg(m,ok){const e=document.getElementById('authMsg');e.textContent=m;e.className='text-[11px] text-center mt-3 min-h-[16px] '+(ok?'text-emerald-600':'text-rose-500');}
+function authErrTh(e){
+  const m={'auth/email-already-in-use':'อีเมลนี้เคยสมัครไว้แล้ว — หากต้องการสมัครใหม่ ให้แอดมินลบบัญชีเดิมก่อน',
+    'auth/invalid-email':'รูปแบบอีเมลไม่ถูกต้อง','auth/weak-password':'รหัสผ่านสั้นเกินไป (อย่างน้อย 6 ตัว)',
+    'auth/user-not-found':'ไม่พบบัญชีนี้ในระบบ','auth/wrong-password':'รหัสผ่านไม่ถูกต้อง',
+    'auth/invalid-credential':'อีเมลหรือรหัสผ่านไม่ถูกต้อง','auth/too-many-requests':'พยายามหลายครั้งเกินไป ลองใหม่ภายหลัง',
+    'auth/popup-closed-by-user':'ปิดหน้าต่างก่อนเข้าสู่ระบบสำเร็จ',
+    'auth/account-exists-with-different-credential':'อีเมลนี้สมัครด้วยรหัสผ่านไว้แล้ว กรุณาเข้าสู่ระบบด้วยรหัสผ่าน',
+    'auth/operation-not-allowed':'ยังไม่ได้เปิดวิธีเข้าสู่ระบบนี้ใน Firebase Console'};
+  return m[e.code]||e.message;}
+
+async function doSignup(){
+  const nick=document.getElementById('suNick').value.trim();
+  const first=document.getElementById('suFirst').value.trim();
+  const last=document.getElementById('suLast').value.trim();
+  const level=document.getElementById('suLevel').value;
+  const email=document.getElementById('suEmail').value.trim();
+  const p1=document.getElementById('suPass').value, p2=document.getElementById('suPass2').value;
+  if(!nick){authMsg('กรุณากรอกชื่อเล่น');return;}
+  if(!email){authMsg('กรุณากรอกอีเมล');return;}
+  if(p1.length<6){authMsg('รหัสผ่านต้องยาวอย่างน้อย 6 ตัว');return;}
+  if(p1!==p2){authMsg('รหัสผ่านทั้งสองช่องไม่ตรงกัน');return;}
+  authMsg('กำลังสมัคร…',true);
+  try{
+    const cred=await auth.createUserWithEmailAndPassword(email,p1);
+    await cred.user.updateProfile({displayName:nick});
+    await ensureAccount(cred.user,{nickname:nick,firstName:first,lastName:last,level});
+    authMsg('สมัครสำเร็จ! กำลังเข้าสู่ระบบ…',true);
+  }catch(e){authMsg(authErrTh(e));}}
+
+async function doLogin(){
+  const email=document.getElementById('liEmail').value.trim(), pass=document.getElementById('liPass').value;
+  if(!email||!pass){authMsg('กรอกอีเมลและรหัสผ่าน');return;}
+  authMsg('กำลังเข้าสู่ระบบ…',true);
+  try{await auth.signInWithEmailAndPassword(email,pass);}catch(e){authMsg(authErrTh(e));}}
+
+async function doReset(){
+  const email=document.getElementById('liEmail').value.trim();
+  if(!email){authMsg('กรอกอีเมลในช่องด้านบนก่อน แล้วกดลืมรหัสผ่านอีกครั้ง');return;}
+  try{await auth.sendPasswordResetEmail(email);authMsg('ส่งลิงก์รีเซ็ตรหัสผ่านไปที่ '+email+' แล้ว ✉️',true);}
+  catch(e){authMsg(authErrTh(e));}}
+
 function loginGoogle(){
   const p=new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(p).catch(e=>{document.getElementById('loginErr').textContent='เข้าสู่ระบบไม่สำเร็จ: '+e.message;});
-}
+  auth.signInWithPopup(p).catch(e=>authMsg(authErrTh(e)));}
+
 function logout(){auth.signOut().then(()=>location.reload());}
+function changePass(){
+  if(!me||!me.email){toast('ไม่พบอีเมล');return;}
+  auth.sendPasswordResetEmail(me.email).then(()=>toast('ส่งลิงก์เปลี่ยนรหัสผ่านไปที่อีเมลแล้ว ✉️')).catch(e=>toast(authErrTh(e)));}
+
 const isAdmin=()=>me&&me.role==='admin';
 const isSuper=()=>me&&(me.role==='super'||me.role==='admin');
 function canEditSession(s){return me&&(s.createdBy===me.uid||isSuper());}
 function canDeleteSession(s){return me&&(s.createdBy===me.uid||isAdmin());}
-function canEditPlayer(p){return me&&(p.ownerUid===me.uid||isSuper());}
-function canDeletePlayer(p){return me&&(p.ownerUid===me.uid||isAdmin());}
+function canEditPlayer(p){return me&&(p.ownerUid===me.uid||isSuper()||(!p.ownerUid&&isSuper()));}
+function canDeletePlayer(p){return me&&isAdmin();}
 function canDeleteMatch(m){return me&&(m.createdBy===me.uid||isAdmin());}
 function canEditMatch(m){return me&&(m.createdBy===me.uid||isSuper());}
 function deny(){toast('⛔ คุณไม่มีสิทธิ์ทำรายการนี้');}
 
+/* --- สร้าง users doc + players doc ผูกกัน 1:1 --- */
+async function ensureAccount(u,extra){
+  const uref=db.collection('users').doc(u.uid);
+  const snap=await uref.get();
+  let role='user';
+  if(!snap.exists){
+    try{const a=await db.collection('users').where('role','==','admin').limit(1).get();if(a.empty)role='admin';}catch(e){}
+  } else role=snap.data().role||'user';
+
+  let playerId=snap.exists?snap.data().playerId:null;
+  if(!playerId){
+    const q=await db.collection('players').where('ownerUid','==',u.uid).limit(1).get();
+    if(!q.empty)playerId=q.docs[0].id;
+  }
+  if(!playerId){
+    const nick=(extra&&extra.nickname)||u.displayName||(u.email||'ผู้เล่น').split('@')[0];
+    const ref=await db.collection('players').add({
+      nickname:nick,firstName:(extra&&extra.firstName)||'',lastName:(extra&&extra.lastName)||'',
+      level:(extra&&extra.level)||'P',photo:u.photoURL||null,ownerUid:u.uid,
+      email:u.email||'',createdAt:SV.serverTimestamp()});
+    playerId=ref.id;
+  }
+  await uref.set({email:u.email||'',name:(extra&&extra.nickname)||u.displayName||(u.email||'ผู้ใช้').split('@')[0],
+    photo:u.photoURL||'',role,playerId,updatedAt:SV.serverTimestamp(),
+    ...(snap.exists?{}:{createdAt:SV.serverTimestamp()})},{merge:true});
+}
+
 auth.onAuthStateChanged(async u=>{
-  if(!u){document.getElementById('loginGate').classList.remove('hidden');return;}
-  const ref=db.collection('users').doc(u.uid);
+  if(!u){document.getElementById('authGate').classList.remove('hidden');return;}
   try{
-    const snap=await ref.get();
-    if(!snap.exists){
-      let role='user';
-      try{const a=await db.collection('users').where('role','==','admin').limit(1).get();if(a.empty)role='admin';}catch(e){}
-      await ref.set({email:u.email||'',name:u.displayName||'ผู้ใช้',photo:u.photoURL||'',role,playerId:null,createdAt:SV.serverTimestamp()});
-    }
-    ref.onSnapshot(s=>{if(s.exists){me={uid:u.uid,...s.data()};document.getElementById('loginGate').classList.add('hidden');if(!started){started=true;startApp();}renderAll();}});
-  }catch(e){document.getElementById('loginErr').textContent='โหลดข้อมูลผู้ใช้ไม่สำเร็จ: '+e.message;}
+    await ensureAccount(u,null);
+    db.collection('users').doc(u.uid).onSnapshot(s=>{
+      if(!s.exists){toast('บัญชีนี้ถูกลบโดยผู้ดูแล');setTimeout(()=>auth.signOut().then(()=>location.reload()),1500);return;}
+      me={uid:u.uid,...s.data()};
+      document.getElementById('authGate').classList.add('hidden');
+      if(!started){started=true;startApp();}
+      renderAll();
+    });
+  }catch(e){authMsg('โหลดข้อมูลผู้ใช้ไม่สำเร็จ: '+e.message);}
 });
 
 /* ============ LISTENERS ============ */
@@ -486,17 +580,17 @@ function startApp(){
   fillTime('sesStartH','sesStartM','18:00');fillTime('sesEndH','sesEndM','21:00');
   fillTime('schStartH','schStartM','18:00');fillTime('edStartH','edStartM','18:00');fillTime('edEndH','edEndM','21:00');
   setInterval(checkReminders,60000);
-  go('home');
-}
+  go('home');}
 function pushLive(n){liveState=n;db.collection('liveState').doc('main').set(n).catch(()=>toast('บันทึกไม่สำเร็จ'));renderAll();}
 
 /* ============ NAV ============ */
-const TITLES={home:'🏸 ก๊วนแบดมินตัน',courts:'🏟️ จัดสนาม',scoreboard:'📺 สกอร์บอร์ด',sessions:'📅 นัดหมาย',members:'👤 สมาชิก',schedule:'📋 จัดตาราง',stats:'📊 สถิติ',history:'📜 ประวัติ',account:'⚙️ ตั้งค่า'};
+const TITLES={home:'🏸 ก๊วนแบดมินตัน',courts:'🏟️ จัดสนาม',scoreboard:'📺 สกอร์บอร์ด',sessions:'📅 นัดหมาย',members:'👥 สมาชิก',schedule:'📋 จัดตาราง',stats:'📊 สถิติ',history:'📜 ประวัติ',account:'⚙️ ตั้งค่า'};
 function go(p){page=p;
   ['home','courts','scoreboard','sessions','members','schedule','stats','history','account'].forEach(x=>
     document.getElementById('page-'+x).classList.toggle('hidden',x!==p));
   document.getElementById('pageTitle').textContent=TITLES[p];
   document.getElementById('backBtn').classList.toggle('hidden',p==='home');
+  if(p==='members'&&!editingMember)loadMyProfile();
   window.scrollTo({top:0});renderAll();}
 
 /* ============ HELPERS ============ */
@@ -606,7 +700,7 @@ async function createSession(){
   const note=document.getElementById('sesNote').value.trim();
   try{
     await db.collection('sessions').add({venue,date,courts,start,end,note,attendees:[],declined:[],
-      createdBy:me.uid,createdByName:me.name,createdByPhoto:me.photo||'',createdAt:SV.serverTimestamp()});
+      createdBy:me.uid,createdByName:me.name,createdAt:SV.serverTimestamp()});
     document.getElementById('sesVenue').value='';document.getElementById('sesNote').value='';
     toast('สร้างนัดเรียบร้อย 🎉');
   }catch(e){toast('สร้างไม่สำเร็จ: '+e.message);}}
@@ -614,20 +708,20 @@ async function joinSession(sid,pid){
   if(!pid){toast('เลือกสมาชิกก่อน');return;}
   const s=sessions.find(x=>x.id===sid);if(!s)return;
   await db.collection('sessions').doc(sid).update({
-    attendees:[...new Set([...(s.attendees||[]),pid])],
-    declined:(s.declined||[]).filter(i=>i!==pid)});
+    attendees:[...new Set([...(s.attendees||[]),pid])],declined:(s.declined||[]).filter(i=>i!==pid)});
   toast(nameOf(pid)+' เข้าร่วมแล้ว ✅');}
 async function declineSession(sid,pid){
   if(!pid){toast('เลือกสมาชิกก่อน');return;}
   const s=sessions.find(x=>x.id===sid);if(!s)return;
   await db.collection('sessions').doc(sid).update({
-    declined:[...new Set([...(s.declined||[]),pid])],
-    attendees:(s.attendees||[]).filter(i=>i!==pid)});
+    declined:[...new Set([...(s.declined||[]),pid])],attendees:(s.attendees||[]).filter(i=>i!==pid)});
   toast(nameOf(pid)+' แจ้งไม่เข้าร่วม ❌');}
-async function removeFromLists(sid,pid){const s=sessions.find(x=>x.id===sid);if(!s)return;
+async function removeFromLists(sid,pid){
+  const s=sessions.find(x=>x.id===sid);if(!s)return;
+  if(pid!==me.playerId&&!canEditSession(s)&&!isSuper())return deny();
   await db.collection('sessions').doc(sid).update({attendees:(s.attendees||[]).filter(i=>i!==pid),declined:(s.declined||[]).filter(i=>i!==pid)});}
-function myJoin(sid){if(!me||!me.playerId){toast('ผูกโปรไฟล์สมาชิกก่อนที่หน้า ตั้งค่า');go('account');return;}joinSession(sid,me.playerId);}
-function myDecline(sid){if(!me||!me.playerId){toast('ผูกโปรไฟล์สมาชิกก่อนที่หน้า ตั้งค่า');go('account');return;}declineSession(sid,me.playerId);}
+function myJoin(sid){if(!me.playerId){toast('ไม่พบโปรไฟล์ของคุณ');return;}joinSession(sid,me.playerId);}
+function myDecline(sid){if(!me.playerId){toast('ไม่พบโปรไฟล์ของคุณ');return;}declineSession(sid,me.playerId);}
 async function joinAll(sid){const s=sessions.find(x=>x.id===sid);if(!canEditSession(s))return deny();
   if(!confirm('เพิ่มสมาชิกทั้งหมดเข้าร่วม?'))return;
   await db.collection('sessions').doc(sid).update({attendees:players.map(p=>p.id),declined:[]});}
@@ -661,7 +755,7 @@ function useSession(sid){const s=sessions.find(x=>x.id===sid);if(!s)return;
   pushLive(n);go('courts');toast('ใช้รายชื่อจากนัดนี้แล้ว');}
 function clearActiveSession(){const n=clone(liveState);n.activeSessionId=null;pushLive(n);}
 
-/* ============ LINE & NOTIFY ============ */
+/* ============ NOTIFY / LINE ============ */
 function sessionText(s){
   const att=(s.attendees||[]).map(nameOf),dec=(s.declined||[]).map(nameOf);
   return `🏸 นัดตีแบด\n📍 ${s.venue}\n📅 ${thDate(s.date)}\n⏰ ${s.start}-${s.end} น.\n🏟️ ${s.courts} สนาม`
@@ -669,16 +763,14 @@ function sessionText(s){
     +`\n\n✅ เข้าร่วม (${att.length}): ${att.join(', ')||'-'}`
     +(dec.length?`\n❌ ไม่ว่าง (${dec.length}): ${dec.join(', ')}`:'')
     +`\n\n👤 สร้างโดย: ${s.createdByName||'-'}\n🔗 ${location.href}`;}
-function shareLine(sid){const s=sessions.find(x=>x.id===sid);if(!s)return;
-  window.open('https://line.me/R/share?text='+encodeURIComponent(sessionText(s)),'_blank');}
+function copyText(sid){const s=sessions.find(x=>x.id===sid);if(!s)return;
+  navigator.clipboard.writeText(sessionText(s)).then(()=>toast('คัดลอกข้อความแล้ว 📋')).catch(()=>toast('คัดลอกไม่สำเร็จ'));}
 async function pushLine(sid){
   const url=(settings.lineWebhookUrl||'').trim();
   if(!url){toast('ยังไม่ได้ตั้ง Webhook (ไปที่ ตั้งค่า)');return;}
   const s=sessions.find(x=>x.id===sid);if(!s)return;
   try{await fetch(url,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:sessionText(s)})});
     toast('ส่งเข้า LINE แล้ว 📨');}catch(e){toast('ส่งไม่สำเร็จ: '+e.message);}}
-function copyText(sid){const s=sessions.find(x=>x.id===sid);if(!s)return;
-  navigator.clipboard.writeText(sessionText(s)).then(()=>toast('คัดลอกข้อความแล้ว 📋'));}
 function askNotify(){
   if(!('Notification'in window)){toast('อุปกรณ์นี้ไม่รองรับการแจ้งเตือน');return;}
   Notification.requestPermission().then(p=>toast(p==='granted'?'เปิดแจ้งเตือนแล้ว 🔔':'ไม่ได้รับอนุญาต'));}
@@ -691,17 +783,14 @@ function checkReminders(){
     const st=new Date();st.setHours(h,m,0,0);
     const diff=(st-now)/60000;
     if(diff>0&&diff<=60){
-      const key='rm_'+s.id;
-      if(localStorage.getItem(key))return;
-      localStorage.setItem(key,'1');
-      new Notification('🏸 ใกล้ถึงเวลาตีแบดแล้ว!',{body:`${s.venue}\n${s.start}-${s.end} น. · ${s.courts} สนาม\nเข้าร่วม ${(s.attendees||[]).length} คน`});
-    }});}
+      const key='rm_'+s.id;if(localStorage.getItem(key))return;localStorage.setItem(key,'1');
+      new Notification('🏸 ใกล้ถึงเวลาตีแบดแล้ว!',{body:`${s.venue}\n${s.start}-${s.end} น. · ${s.courts} สนาม\nเข้าร่วม ${(s.attendees||[]).length} คน`});}});}
 function saveSettings(){
   db.collection('settings').doc('main').set({lineWebhookUrl:document.getElementById('lineHook').value.trim()},{merge:true})
     .then(()=>toast('บันทึกการตั้งค่าแล้ว ✅')).catch(e=>toast('ผิดพลาด: '+e.message));}
 
-/* ============ MEMBERS ============ */
-function resizeImg(file,max=220,q=.65){return new Promise((res,rej)=>{const r=new FileReader();
+/* ============ MEMBER PROFILE ============ */
+function resizeImg(file,max=260,q=.7){return new Promise((res,rej)=>{const r=new FileReader();
   r.onload=e=>{const im=new Image();im.onload=()=>{let w=im.width,h=im.height;
     if(w>h){if(w>max){h=h*max/w;w=max;}}else{if(h>max){w=w*max/h;h=max;}}
     const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(im,0,0,w,h);
@@ -709,58 +798,78 @@ function resizeImg(file,max=220,q=.65){return new Promise((res,rej)=>{const r=ne
 async function onPhoto(e){const f=e.target.files[0];if(!f)return;photoData=await resizeImg(f);photoRemove=false;
   const p=document.getElementById('mPhotoPrev');p.src=photoData;p.classList.remove('hidden');document.getElementById('mPhotoHolder').classList.add('hidden');}
 function clearPhoto(){photoData=null;photoRemove=true;document.getElementById('mPhoto').value='';
-  document.getElementById('mPhotoPrev').classList.add('hidden');document.getElementById('mPhotoHolder').classList.remove('hidden');}
-function resetMemberForm(){editingMember=null;photoData=null;photoRemove=false;
-  ['mNick','mFirst','mLast'].forEach(i=>document.getElementById(i).value='');
-  document.getElementById('mLevel').value='P';document.getElementById('mPhoto').value='';
-  document.getElementById('mLinkMe').checked=false;
-  document.getElementById('mPhotoPrev').classList.add('hidden');document.getElementById('mPhotoHolder').classList.remove('hidden');
-  document.getElementById('mFormTitle').textContent='➕ เพิ่มสมาชิก';document.getElementById('mCancelBtn').classList.add('hidden');}
+  document.getElementById('mPhotoPrev').classList.add('hidden');
+  const h=document.getElementById('mPhotoHolder');h.classList.remove('hidden');
+  const[em,bg]=animalFor(editingMember||(me&&me.playerId)||'x');h.textContent=em;h.className='w-28 h-28 rounded-full border-4 border-indigo-200 flex items-center justify-center text-5xl '+bg;}
+function loadMyProfile(){editingMember=me&&me.playerId?me.playerId:null;fillMemberForm(editingMember);
+  document.getElementById('mFormTitle').textContent='🙋 โปรไฟล์ของฉัน';
+  document.getElementById('mCancelBtn').classList.add('hidden');}
+function fillMemberForm(id){
+  const p=players.find(x=>x.id===id);photoData=null;photoRemove=false;
+  document.getElementById('mNick').value=p?(p.nickname||''):'';
+  document.getElementById('mFirst').value=p?(p.firstName||''):'';
+  document.getElementById('mLast').value=p?(p.lastName||''):'';
+  document.getElementById('mLevel').value=p?(p.level||'P'):'P';
+  document.getElementById('mPhoto').value='';
+  const pv=document.getElementById('mPhotoPrev'),ho=document.getElementById('mPhotoHolder');
+  if(p&&p.photo){pv.src=p.photo;pv.classList.remove('hidden');ho.classList.add('hidden');}
+  else{pv.classList.add('hidden');ho.classList.remove('hidden');
+    const[em,bg]=animalFor(id||'x');ho.textContent=em;ho.className='w-28 h-28 rounded-full border-4 border-indigo-200 flex items-center justify-center text-5xl '+bg;}}
+function resetMemberForm(){loadMyProfile();toast('กลับมาที่โปรไฟล์ของฉัน');}
 function editMember(id){const p=players.find(x=>x.id===id);if(!p)return;
   if(!canEditPlayer(p))return deny();
-  editingMember=id;photoData=null;photoRemove=false;
-  document.getElementById('mNick').value=p.nickname||'';document.getElementById('mFirst').value=p.firstName||'';
-  document.getElementById('mLast').value=p.lastName||'';document.getElementById('mLevel').value=p.level||'P';
-  document.getElementById('mLinkMe').checked=(p.ownerUid===me.uid);
-  const pv=document.getElementById('mPhotoPrev');
-  if(p.photo){pv.src=p.photo;pv.classList.remove('hidden');document.getElementById('mPhotoHolder').classList.add('hidden');}
-  else{pv.classList.add('hidden');document.getElementById('mPhotoHolder').classList.remove('hidden');}
-  document.getElementById('mFormTitle').textContent='✏️ แก้ไขสมาชิก';document.getElementById('mCancelBtn').classList.remove('hidden');
+  editingMember=id;fillMemberForm(id);
+  document.getElementById('mFormTitle').textContent=(id===me.playerId?'🙋 โปรไฟล์ของฉัน':'✏️ แก้ไข: '+nameOf(id));
+  document.getElementById('mCancelBtn').classList.toggle('hidden',id===me.playerId);
   go('members');window.scrollTo({top:0,behavior:'smooth'});}
 async function saveMember(){
   const nickname=document.getElementById('mNick').value.trim();
   const firstName=document.getElementById('mFirst').value.trim();
   const lastName=document.getElementById('mLast').value.trim();
   const level=document.getElementById('mLevel').value;
-  const linkMe=document.getElementById('mLinkMe').checked;
-  if(!nickname&&!firstName){toast('ใส่ชื่อเล่นหรือชื่อจริงอย่างน้อย 1 อย่าง');return;}
+  if(!nickname){toast('กรุณากรอกชื่อเล่น');return;}
+  const target=editingMember||me.playerId;
+  if(!target){toast('ไม่พบโปรไฟล์');return;}
+  const p=players.find(x=>x.id===target);
+  if(p&&!canEditPlayer(p))return deny();
   const data={nickname,firstName,lastName,level};
   if(photoData)data.photo=photoData;else if(photoRemove)data.photo=null;
   try{
-    let pid=editingMember;
-    if(editingMember){if(linkMe)data.ownerUid=me.uid;await db.collection('players').doc(editingMember).update(data);}
-    else{data.createdAt=SV.serverTimestamp();data.ownerUid=linkMe?me.uid:null;
-      const ref=await db.collection('players').add(data);pid=ref.id;}
-    if(linkMe)await db.collection('users').doc(me.uid).update({playerId:pid});
-    resetMemberForm();toast('บันทึกแล้ว ✅');
+    await db.collection('players').doc(target).update(data);
+    if(target===me.playerId)await db.collection('users').doc(me.uid).update({name:nickname});
+    photoData=null;photoRemove=false;toast('บันทึกโปรไฟล์แล้ว ✅');
   }catch(e){toast('ผิดพลาด: '+e.message);}}
 async function delMember(id){const p=players.find(x=>x.id===id);
   if(!canDeletePlayer(p))return deny();
+  if(p.ownerUid){toast('สมาชิกนี้ผูกกับบัญชีผู้ใช้ — ให้ลบผู้ใช้ที่หน้า ตั้งค่า');return;}
   if(!confirm('ลบสมาชิก "'+nameOf(id)+'" ?'))return;
   const n=clone(liveState);n.courts.forEach(c=>{c.teamA=c.teamA.map(v=>v===id?null:v);c.teamB=c.teamB.map(v=>v===id?null:v);recalc(c);});
   await db.collection('liveState').doc('main').set(n);
   await db.collection('players').doc(id).delete();toast('ลบแล้ว');}
-function linkPlayer(pid){db.collection('users').doc(me.uid).update({playerId:pid||null})
-  .then(()=>toast(pid?('ผูกกับ '+nameOf(pid)+' แล้ว'):'ยกเลิกการผูกแล้ว'));}
+async function addGuest(){
+  if(!isSuper())return deny();
+  const n=prompt('ชื่อเล่นของสมาชิก (ไม่มีบัญชีเข้าระบบ)');
+  if(!n||!n.trim())return;
+  await db.collection('players').add({nickname:n.trim(),firstName:'',lastName:'',level:'P',photo:null,ownerUid:null,guest:true,createdAt:SV.serverTimestamp()});
+  toast('เพิ่มสมาชิกแล้ว');}
 
 /* ============ ADMIN ============ */
 async function setRole(uid,role){if(!isAdmin())return deny();
-  if(uid===me.uid&&role!=='admin'&&!confirm('ลดสิทธิ์ตัวเอง? จะแก้กลับไม่ได้ถ้าไม่มี Admin อื่น'))return;
+  if(uid===me.uid&&role!=='admin'&&!confirm('ลดสิทธิ์ตัวเอง? อาจแก้กลับไม่ได้'))return;
   await db.collection('users').doc(uid).update({role});toast('ปรับสิทธิ์แล้ว');}
+async function adminLink(uid,pid){if(!isAdmin())return deny();
+  await db.collection('users').doc(uid).update({playerId:pid||null});
+  if(pid)await db.collection('players').doc(pid).update({ownerUid:uid});
+  toast('ผูกโปรไฟล์แล้ว');}
 async function delUser(uid){if(!isAdmin())return deny();
   if(uid===me.uid){toast('ลบตัวเองไม่ได้');return;}
-  if(!confirm('ลบผู้ใช้รายนี้ออกจากระบบ?'))return;
-  await db.collection('users').doc(uid).delete();toast('ลบผู้ใช้แล้ว');}
+  const u=users.find(x=>x.uid===uid);
+  if(!confirm('ลบผู้ใช้ "'+(u?u.name:'')+'" ?\n(ข้อมูลสมาชิกจะถูกลบด้วย และอีเมลนี้จะสมัครใหม่ได้)'))return;
+  try{
+    if(u&&u.playerId)await db.collection('players').doc(u.playerId).delete().catch(()=>{});
+    await db.collection('users').doc(uid).delete();
+    toast('ลบผู้ใช้แล้ว · หมายเหตุ: ต้องลบบัญชีใน Firebase Console → Authentication ด้วย จึงจะสมัครอีเมลเดิมซ้ำได้');
+  }catch(e){toast('ลบไม่สำเร็จ: '+e.message);}}
 
 /* ============ SCHEDULE ============ */
 function genSchedule(){
@@ -822,7 +931,6 @@ async function saveManual(){
 async function delMatch(id){const m=matchHistory.find(x=>x.id===id);
   if(!canDeleteMatch(m))return deny();
   if(!confirm('ลบบันทึกนี้?'))return;await db.collection('matchHistory').doc(id).delete();toast('ลบแล้ว');}
-function onStatsDate(){}
 
 /* ============ RENDER ============ */
 function renderAll(){if(!me)return;
@@ -830,15 +938,15 @@ function renderAll(){if(!me)return;
   renderMembers();renderSchedule();renderDateOptions();renderStats();renderHistory();renderAccount();}
 function renderUserChip(){
   const c=document.getElementById('userChip');if(!c||!me)return;
-  const r=ROLE[me.role]||ROLE.user;
-  c.innerHTML=(me.photo?`<img src="${me.photo}" class="w-6 h-6 rounded-full object-cover"/>`:`<div class="w-6 h-6 rounded-full bg-indigo-200 flex items-center justify-center text-[10px] font-bold text-indigo-700">${esc((me.name||'U').charAt(0))}</div>`)
-    +`<span class="text-[10px] font-semibold ${r.c} px-1.5 rounded-full">${r.l}</span>`;}
+  const r=ROLE[me.role]||ROLE.user;const p=players.find(x=>x.id===me.playerId);
+  c.innerHTML=avatar(p,'w-7 h-7','text-base')+`<span class="text-[10px] font-semibold ${r.c} px-1.5 rounded-full">${r.l}</span>`;}
 
 function attendeeChips(s,list,type){
   const arr=(s[list]||[]).filter(id=>players.some(p=>p.id===id));
   if(!arr.length)return `<span class="text-[11px] opacity-60">—</span>`;
-  return arr.map(id=>`<span class="flex items-center gap-1 ${type==='y'?'bg-emerald-500/25':'bg-rose-500/25'} rounded-full pl-0.5 pr-2 py-0.5 text-[11px]">
-    ${avatar(players.find(p=>p.id===id),'w-5 h-5')}<span>${esc(nameOf(id))}</span></span>`).join('');}
+  return arr.map(id=>`<div class="flex flex-col items-center gap-1 w-14">
+    ${avatar(players.find(p=>p.id===id),'w-12 h-12','text-2xl')}
+    <span class="text-[10px] leading-tight text-center truncate w-full">${esc(nameOf(id))}</span></div>`).join('');}
 
 function renderHome(){
   document.getElementById('hStatMembers').textContent=players.length;
@@ -846,34 +954,28 @@ function renderHome(){
   document.getElementById('hStatJoin').textContent=st?(st.attendees||[]).length:0;
   document.getElementById('hStatMatch').textContent=matchHistory.filter(m=>m.date===todayStr()).length;
 
-  const up=upcomingSessions();
-  const hero=document.getElementById('heroSession');
+  const up=upcomingSessions();const hero=document.getElementById('heroSession');
   if(!up.length){hero.innerHTML=`<p class="text-sm opacity-80">ยังไม่มีนัดที่กำลังจะถึง</p>
     <button onclick="go('sessions')" class="mt-3 w-full py-2.5 rounded-xl bg-white text-indigo-700 font-bold text-sm">➕ สร้างนัดใหม่</button>`;}
-  else{
-    const s=up[0];const att=(s.attendees||[]).length,dec=(s.declined||[]).length;
+  else{const s=up[0];const att=(s.attendees||[]).length,dec=(s.declined||[]).length;
     hero.innerHTML=`
       <p class="text-xl font-bold leading-tight">${esc(s.venue)}</p>
       <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm mt-2 opacity-95">
         <span>📅 ${thDate(s.date)}</span><span>⏰ ${s.start}–${s.end} น.</span><span>🏟️ ${s.courts} สนาม</span>
-        ${s.note?`<span>💰 ${esc(s.note)}</span>`:''}
-      </div>
+        ${s.note?`<span>💰 ${esc(s.note)}</span>`:''}</div>
       <p class="text-[11px] opacity-70 mt-1">👤 สร้างโดย ${esc(s.createdByName||'-')}</p>
       <div class="mt-3 bg-white/10 rounded-2xl p-3">
-        <p class="text-xs font-bold mb-1.5">✅ เข้าร่วม ${att} คน</p>
-        <div class="flex flex-wrap gap-1.5">${attendeeChips(s,'attendees','y')}</div>
-        <p class="text-xs font-bold mt-3 mb-1.5">❌ ไม่เข้าร่วม ${dec} คน</p>
-        <div class="flex flex-wrap gap-1.5">${attendeeChips(s,'declined','n')}</div>
-      </div>
+        <p class="text-xs font-bold mb-2">✅ เข้าร่วม ${att} คน</p>
+        <div class="flex flex-wrap gap-2">${attendeeChips(s,'attendees','y')}</div>
+        <p class="text-xs font-bold mt-3 mb-2">❌ ไม่เข้าร่วม ${dec} คน</p>
+        <div class="flex flex-wrap gap-2 opacity-70">${attendeeChips(s,'declined','n')}</div></div>
       <div class="grid grid-cols-2 gap-2 mt-3">
         <button onclick="myJoin('${s.id}')" class="py-2.5 rounded-xl bg-emerald-400 text-emerald-950 font-bold text-sm">✅ ฉันไป</button>
-        <button onclick="myDecline('${s.id}')" class="py-2.5 rounded-xl bg-white/20 font-bold text-sm">❌ ไม่ว่าง</button>
-      </div>
+        <button onclick="myDecline('${s.id}')" class="py-2.5 rounded-xl bg-white/20 font-bold text-sm">❌ ไม่ว่าง</button></div>
       <div class="grid grid-cols-3 gap-2 mt-2">
-        <button onclick="shareLine('${s.id}')" class="py-2 rounded-xl bg-white/15 text-[11px] font-semibold">💬 แชร์ LINE</button>
         <button onclick="copyText('${s.id}')" class="py-2 rounded-xl bg-white/15 text-[11px] font-semibold">📋 คัดลอก</button>
-        <button onclick="useSession('${s.id}')" class="py-2 rounded-xl bg-white/15 text-[11px] font-semibold">🏟️ จัดก๊วน</button>
-      </div>`;}
+        <button onclick="pushLine('${s.id}')" class="py-2 rounded-xl bg-white/15 text-[11px] font-semibold">📨 ส่งกลุ่ม</button>
+        <button onclick="useSession('${s.id}')" class="py-2 rounded-xl bg-white/15 text-[11px] font-semibold">🏟️ จัดก๊วน</button></div>`;}
 
   const others=up.slice(1);
   document.getElementById('otherSesCount').textContent=others.length?others.length+' นัด':'';
@@ -882,8 +984,7 @@ function renderHome(){
       <div class="min-w-0"><p class="text-sm font-semibold text-slate-700 truncate">${esc(s.venue)}</p>
       <p class="text-[11px] text-slate-400">${thDate(s.date)} · ${s.start}–${s.end} น. · ${s.courts} สนาม</p></div>
       <div class="text-right shrink-0"><p class="text-xs font-bold text-emerald-500">✅ ${(s.attendees||[]).length}</p>
-      <p class="text-[10px] text-rose-400">❌ ${(s.declined||[]).length}</p></div>
-    </button>`).join('')
+      <p class="text-[10px] text-rose-400">❌ ${(s.declined||[]).length}</p></div></button>`).join('')
     :'<p class="text-sm text-slate-400">ไม่มีนัดอื่น</p>';}
 
 function renderCourts(){
@@ -906,6 +1007,7 @@ function renderCourts(){
       return `<select onchange="assignSlot(${c.id},'${team}',${idx},this.value)" class="w-full px-2 py-2 rounded-xl border text-sm bg-white ${cur?'border-indigo-300 font-semibold text-slate-800':'border-dashed border-slate-300 text-slate-400'}">
         <option value="">＋ เลือกผู้เล่น</option>
         ${avail.map(p=>`<option value="${p.id}" ${p.id===cur?'selected':''}>${esc(nameOf(p.id))} · ${LV[p.level||'P'].l}</option>`).join('')}</select>`;};
+    const faces=team=>c[team].filter(Boolean).map(id=>avatar(players.find(p=>p.id===id),'w-9 h-9','text-lg')).join('');
     const head=c.status==='playing'?'bg-gradient-to-r from-indigo-500 to-violet-500 text-white':c.status==='partial'?'bg-amber-100 text-amber-700':'bg-slate-100 text-slate-500';
     const badge=c.status==='playing'?'กำลังเล่น':c.status==='partial'?'รอเพิ่มคน':'ว่าง';
     return `<div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden fade-in">
@@ -913,8 +1015,10 @@ function renderCourts(){
         <span class="font-bold text-sm">🏟️ สนาม ${c.id}</span><span class="text-[11px] opacity-80">${badge}</span></div>
       <div class="p-3 space-y-2">
         <div class="grid grid-cols-2 gap-2">
-          <div class="space-y-1.5"><p class="text-[10px] font-bold text-indigo-500 text-center">ทีม A</p>${c.teamA.map((v,i)=>opts('teamA',i,v)).join('')}</div>
-          <div class="space-y-1.5"><p class="text-[10px] font-bold text-rose-500 text-center">ทีม B</p>${c.teamB.map((v,i)=>opts('teamB',i,v)).join('')}</div></div>
+          <div class="space-y-1.5"><p class="text-[10px] font-bold text-indigo-500 text-center">ทีม A</p>
+            <div class="flex justify-center gap-1">${faces('teamA')}</div>${c.teamA.map((v,i)=>opts('teamA',i,v)).join('')}</div>
+          <div class="space-y-1.5"><p class="text-[10px] font-bold text-rose-500 text-center">ทีม B</p>
+            <div class="flex justify-center gap-1">${faces('teamB')}</div>${c.teamB.map((v,i)=>opts('teamB',i,v)).join('')}</div></div>
         <div class="grid grid-cols-3 gap-2 pt-1">
           <button onclick="sbCourt=${c.id};pullFromCourt();go('scoreboard')" class="py-2 rounded-xl bg-slate-800 text-white text-[11px] font-semibold">📺 สกอร์</button>
           <button onclick="openEnd(${c.id})" class="py-2 rounded-xl bg-emerald-500 text-white text-[11px] font-semibold">🏁 จบแมตช์</button>
@@ -924,8 +1028,8 @@ function renderCourts(){
   const q=eligible().filter(p=>!busy.has(p.id)).sort((a,b)=>gamesToday(a.id)-gamesToday(b.id));
   const wc=document.getElementById('waitCount');if(wc)wc.textContent=q.length;
   const wl=document.getElementById('waitList');
-  if(wl)wl.innerHTML=q.length?q.map(p=>`<div class="flex items-center gap-1.5 bg-amber-50 border border-amber-100 rounded-full pl-1 pr-3 py-1">
-    ${avatar(p,'w-7 h-7')}<span class="text-sm text-slate-700">${esc(nameOf(p.id))}</span>
+  if(wl)wl.innerHTML=q.length?q.map(p=>`<div class="flex items-center gap-2 bg-amber-50 border border-amber-100 rounded-full pl-1 pr-3 py-1">
+    ${avatar(p,'w-9 h-9','text-lg')}<span class="text-sm text-slate-700">${esc(nameOf(p.id))}</span>
     <span class="text-[10px] text-slate-400">${gamesToday(p.id)} เกม</span></div>`).join('')
     :'<p class="text-sm text-slate-400">ไม่มีใครรอคิว 🎉</p>';}
 
@@ -950,7 +1054,7 @@ function renderBoard(){
   const pa=document.getElementById('sbPlayersA'),pb=document.getElementById('sbPlayersB');
   if(pa)pa.innerHTML=mk('A');if(pb)pb.innerHTML=mk('B');
   const idsA=(b.teamAIds||[]).filter(Boolean),idsB=(b.teamBIds||[]).filter(Boolean);
-  const small=ids=>(ids.length?ids:['x']).map(i=>avatar(players.find(p=>p.id===i),'w-8 h-8')).join('');
+  const small=ids=>(ids.length?ids:['x']).map(i=>avatar(players.find(p=>p.id===i),'w-11 h-11','text-2xl')).join('');
   const big=ids=>(ids.length?ids:['x']).map(i=>bigFace(i)).join('');
   const setH=(id,v)=>{const e=document.getElementById(id);if(e)e.innerHTML=v;};
   const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
@@ -973,9 +1077,10 @@ function renderSessions(){
   el.innerHTML=sessions.map(s=>{
     const att=s.attendees||[],dec=s.declined||[];
     const canEdit=canEditSession(s),canDel=canDeleteSession(s);
-    const chip=(id,type)=>`<span class="flex items-center gap-1.5 ${type==='y'?'bg-emerald-50 border-emerald-200':'bg-rose-50 border-rose-200'} border rounded-full pl-1 pr-2 py-1 text-xs">
-      ${avatar(players.find(p=>p.id===id),'w-6 h-6')}<span class="text-slate-700">${esc(nameOf(id))}</span>
-      <button onclick="removeFromLists('${s.id}','${id}')" class="text-slate-400 font-bold">✕</button></span>`;
+    const chip=(id,type)=>`<div class="flex flex-col items-center gap-1 w-16 relative">
+      ${avatar(players.find(p=>p.id===id),'w-14 h-14','text-2xl')}
+      <span class="text-[10px] leading-tight text-center truncate w-full ${type==='y'?'text-slate-700':'text-slate-400'}">${esc(nameOf(id))}</span>
+      ${(id===me.playerId||canEdit||isSuper())?`<button onclick="removeFromLists('${s.id}','${id}')" class="absolute -top-1 -right-0 w-5 h-5 rounded-full bg-white border border-slate-200 text-rose-400 text-[10px] leading-none">✕</button>`:''}</div>`;
     return `<div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm fade-in">
       <div class="flex items-start justify-between gap-2">
         <div class="min-w-0">
@@ -988,43 +1093,48 @@ function renderSessions(){
           ${canDel?`<button onclick="delSession('${s.id}')" class="text-rose-400 text-xs">🗑</button>`:''}</div></div>
 
       <div class="grid grid-cols-2 gap-2 mt-3">
-        <button onclick="myJoin('${s.id}')" class="py-2 rounded-xl bg-emerald-500 text-white text-sm font-bold">✅ ฉันไป</button>
-        <button onclick="myDecline('${s.id}')" class="py-2 rounded-xl bg-slate-200 text-slate-600 text-sm font-bold">❌ ไม่ว่าง</button></div>
+        <button onclick="myJoin('${s.id}')" class="py-2.5 rounded-xl bg-emerald-500 text-white text-sm font-bold">✅ ฉันไป</button>
+        <button onclick="myDecline('${s.id}')" class="py-2.5 rounded-xl bg-slate-200 text-slate-600 text-sm font-bold">❌ ไม่ว่าง</button></div>
 
-      <div class="mt-2 flex gap-2">
+      ${isSuper()?`<div class="mt-2 flex gap-2">
         <select id="join-${s.id}" class="flex-1 px-2 py-2 rounded-xl border border-slate-200 text-sm bg-white">
-          <option value="">เลือกสมาชิก…</option>
+          <option value="">เลือกสมาชิก (สิทธิ์ผู้ดูแล)…</option>
           ${players.map(p=>`<option value="${p.id}">${esc(nameOf(p.id))}</option>`).join('')}</select>
         <button onclick="joinSession('${s.id}',document.getElementById('join-${s.id}').value)" class="px-3 rounded-xl bg-emerald-500 text-white text-xs font-semibold">✅</button>
-        <button onclick="declineSession('${s.id}',document.getElementById('join-${s.id}').value)" class="px-3 rounded-xl bg-rose-400 text-white text-xs font-semibold">❌</button></div>
+        <button onclick="declineSession('${s.id}',document.getElementById('join-${s.id}').value)" class="px-3 rounded-xl bg-rose-400 text-white text-xs font-semibold">❌</button></div>`:''}
 
       ${canEdit?`<div class="flex gap-2 mt-2">
         <button onclick="joinAll('${s.id}')" class="flex-1 py-1.5 rounded-xl bg-slate-100 text-slate-600 text-[11px] font-semibold">➕ เพิ่มทุกคน</button>
         <button onclick="clearAttendees('${s.id}')" class="flex-1 py-1.5 rounded-xl bg-slate-100 text-slate-600 text-[11px] font-semibold">🧹 ล้างรายชื่อ</button></div>`:''}
 
-      <p class="text-xs font-bold text-emerald-600 mt-3">✅ เข้าร่วม ${att.length} คน</p>
-      <div class="flex flex-wrap gap-1.5 mt-1.5">${att.length?att.map(id=>chip(id,'y')).join(''):'<span class="text-xs text-slate-400">ยังไม่มีใครเข้าร่วม</span>'}</div>
-      <p class="text-xs font-bold text-rose-500 mt-3">❌ ไม่เข้าร่วม ${dec.length} คน</p>
-      <div class="flex flex-wrap gap-1.5 mt-1.5">${dec.length?dec.map(id=>chip(id,'n')).join(''):'<span class="text-xs text-slate-400">—</span>'}</div>
+      <p class="text-xs font-bold text-emerald-600 mt-4">✅ เข้าร่วม ${att.length} คน</p>
+      <div class="flex flex-wrap gap-2 mt-2">${att.length?att.map(id=>chip(id,'y')).join(''):'<span class="text-xs text-slate-400">ยังไม่มีใครเข้าร่วม</span>'}</div>
+      <p class="text-xs font-bold text-rose-500 mt-4">❌ ไม่เข้าร่วม ${dec.length} คน</p>
+      <div class="flex flex-wrap gap-2 mt-2 opacity-70">${dec.length?dec.map(id=>chip(id,'n')).join(''):'<span class="text-xs text-slate-400">—</span>'}</div>
 
-      <div class="grid grid-cols-3 gap-2 mt-3">
-        <button onclick="shareLine('${s.id}')" class="py-2 rounded-xl bg-[#06C755] text-white text-[11px] font-bold">💬 แชร์ LINE</button>
-        <button onclick="pushLine('${s.id}')" class="py-2 rounded-xl bg-slate-100 text-slate-600 text-[11px] font-semibold">📨 ส่งกลุ่ม</button>
-        <button onclick="copyText('${s.id}')" class="py-2 rounded-xl bg-slate-100 text-slate-600 text-[11px] font-semibold">📋 คัดลอก</button></div>
+      <div class="grid grid-cols-2 gap-2 mt-4">
+        <button onclick="copyText('${s.id}')" class="py-2 rounded-xl bg-slate-100 text-slate-600 text-[11px] font-semibold">📋 คัดลอกข้อความ</button>
+        <button onclick="pushLine('${s.id}')" class="py-2 rounded-xl bg-[#06C755] text-white text-[11px] font-bold">📨 ส่งเข้ากลุ่ม LINE</button></div>
       <button onclick="useSession('${s.id}')" class="w-full mt-2 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold">🏟️ ใช้รายชื่อนี้จัดก๊วน</button>
     </div>`;}).join('');}
 
 function renderMembers(){
   const el=document.getElementById('memberCards');if(!el)return;
-  if(!players.length){el.innerHTML='<p class="col-span-2 text-center text-slate-400 text-sm py-8">ยังไม่มีสมาชิก</p>';return;}
-  el.innerHTML=players.map(p=>`<div class="bg-white rounded-2xl p-3 border border-slate-100 shadow-sm flex items-center gap-3 fade-in">
-    ${avatar(p,'w-12 h-12')}
-    <div class="flex-1 min-w-0"><p class="font-semibold text-slate-800 text-sm truncate">${esc(nameOf(p.id))}${p.ownerUid===me.uid?' <span class="text-[10px] text-indigo-400">(ฉัน)</span>':''}</p>
-      <p class="text-[11px] text-slate-400 truncate">${esc([p.firstName,p.lastName].filter(Boolean).join(' ')||'-')}</p>
-      <span class="text-[10px] px-2 py-0.5 rounded-full ${LV[p.level||'P'].c}">${LV[p.level||'P'].l}</span></div>
-    <div class="flex flex-col gap-1 shrink-0">
-      ${canEditPlayer(p)?`<button onclick="editMember('${p.id}')" class="text-xs text-indigo-500">✏️</button>`:''}
-      ${canDeletePlayer(p)?`<button onclick="delMember('${p.id}')" class="text-xs text-rose-400">🗑</button>`:''}</div></div>`).join('');}
+  document.getElementById('memCount').textContent=players.length;
+  document.getElementById('addGuestBtn').classList.toggle('hidden',!isSuper());
+  if(!players.length){el.innerHTML='<p class="col-span-3 text-center text-slate-400 text-sm py-8">ยังไม่มีสมาชิก</p>';return;}
+  el.innerHTML=players.map(p=>{
+    const mine=p.id===me.playerId;
+    return `<div class="bg-slate-50 rounded-2xl p-3 flex flex-col items-center text-center fade-in ${mine?'ring-2 ring-indigo-300':''}">
+      ${avatar(p,'w-20 h-20','text-4xl')}
+      <p class="font-semibold text-slate-800 text-sm truncate w-full mt-2">${esc(nameOf(p.id))}</p>
+      <p class="text-[10px] text-slate-400 truncate w-full">${esc([p.firstName,p.lastName].filter(Boolean).join(' ')||(p.guest?'สมาชิกรับเชิญ':'-'))}</p>
+      <span class="text-[10px] px-2 py-0.5 rounded-full mt-1 ${LV[p.level||'P'].c}">${LV[p.level||'P'].l}</span>
+      ${mine?'<span class="text-[10px] text-indigo-500 mt-1">● โปรไฟล์ของฉัน</span>':''}
+      <div class="flex gap-2 mt-2">
+        ${canEditPlayer(p)?`<button onclick="editMember('${p.id}')" class="text-[11px] px-2 py-1 rounded-lg bg-white text-indigo-500 border border-slate-200">✏️ แก้ไข</button>`:''}
+        ${(canDeletePlayer(p)&&!p.ownerUid)?`<button onclick="delMember('${p.id}')" class="text-[11px] px-2 py-1 rounded-lg bg-white text-rose-400 border border-slate-200">🗑</button>`:''}</div>
+    </div>`;}).join('');}
 
 function renderSchedule(){
   const el=document.getElementById('scheduleList');if(!el)return;
@@ -1062,7 +1172,7 @@ function renderStats(){
     const p=players.find(x=>x.id===r.id);const tot=r.w+r.l;const rt=tot?Math.round(r.w/tot*100):0;
     const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
     return `<tr class="border-b border-slate-50">
-      <td class="py-2"><div class="flex items-center gap-2">${avatar(p,'w-8 h-8')}<span class="font-medium text-slate-700 truncate">${medal} ${esc(r.name)}</span></div></td>
+      <td class="py-2"><div class="flex items-center gap-2">${avatar(p,'w-10 h-10','text-xl')}<span class="font-medium text-slate-700 truncate">${medal} ${esc(r.name)}</span></div></td>
       <td class="text-center text-slate-500">${r.g}</td><td class="text-center text-emerald-500 font-semibold">${r.w}</td>
       <td class="text-center text-rose-400 font-semibold">${r.l}</td><td class="text-center text-slate-500">${rt}%</td></tr>`;}).join('')
     :'<tr><td colspan="5" class="text-center text-slate-400 py-6 text-sm">ไม่มีข้อมูล</td></tr>';}
@@ -1082,28 +1192,32 @@ function renderHistory(){
 
 function renderAccount(){
   if(!me)return;
-  const box=document.getElementById('accountBox');
-  const r=ROLE[me.role]||ROLE.user;
-  if(box)box.innerHTML=`${me.photo?`<img src="${me.photo}" class="w-14 h-14 rounded-full object-cover"/>`:`<div class="w-14 h-14 rounded-full bg-indigo-200 flex items-center justify-center font-bold text-indigo-700">${esc((me.name||'U').charAt(0))}</div>`}
-    <div class="min-w-0"><p class="font-semibold text-slate-800 truncate">${esc(me.name||'ผู้ใช้')}</p>
+  const box=document.getElementById('accountBox');const r=ROLE[me.role]||ROLE.user;
+  const p=players.find(x=>x.id===me.playerId);
+  if(box)box.innerHTML=avatar(p,'w-20 h-20','text-4xl')+
+    `<div class="min-w-0"><p class="font-semibold text-slate-800 truncate text-lg">${esc(me.name||'ผู้ใช้')}</p>
     <p class="text-[11px] text-slate-400 truncate">${esc(me.email||'')}</p>
-    <span class="text-[10px] px-2 py-0.5 rounded-full ${r.c} font-semibold">${r.l}</span>
-    ${me.playerId?`<span class="text-[10px] text-slate-400 ml-1">· ผูกกับ ${esc(nameOf(me.playerId))}</span>`:''}</div>`;
-  const sel=document.getElementById('linkPlayerSel');
-  if(sel)sel.innerHTML='<option value="">— ไม่ผูก —</option>'+players.map(p=>`<option value="${p.id}" ${p.id===me.playerId?'selected':''}>${esc(nameOf(p.id))}</option>`).join('');
+    <span class="text-[10px] px-2 py-0.5 rounded-full ${r.c} font-semibold">${r.l}</span></div>`;
   const ap=document.getElementById('adminPanel');
   if(ap){ap.classList.toggle('hidden',!isAdmin());
     if(isAdmin()){document.getElementById('userList').innerHTML=users.map(u=>{
-      const ur=ROLE[u.role]||ROLE.user;
-      return `<div class="flex items-center gap-2 bg-slate-50 rounded-xl p-2">
-        ${u.photo?`<img src="${u.photo}" class="w-9 h-9 rounded-full object-cover"/>`:`<div class="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold">${esc((u.name||'U').charAt(0))}</div>`}
-        <div class="flex-1 min-w-0"><p class="text-sm font-semibold text-slate-700 truncate">${esc(u.name||'-')}</p>
-        <p class="text-[10px] text-slate-400 truncate">${esc(u.email||'')}</p></div>
-        <select onchange="setRole('${u.uid}',this.value)" class="px-2 py-1 rounded-lg border border-slate-200 text-[11px] bg-white">
-          <option value="user" ${u.role==='user'?'selected':''}>สมาชิก</option>
-          <option value="super" ${u.role==='super'?'selected':''}>Super</option>
-          <option value="admin" ${u.role==='admin'?'selected':''}>Admin</option></select>
-        <button onclick="delUser('${u.uid}')" class="text-rose-400 text-xs">🗑</button></div>`;}).join('');}}}
+      const up=players.find(x=>x.id===u.playerId);
+      return `<div class="bg-slate-50 rounded-xl p-2.5">
+        <div class="flex items-center gap-2">
+          ${avatar(up,'w-11 h-11','text-2xl')}
+          <div class="flex-1 min-w-0"><p class="text-sm font-semibold text-slate-700 truncate">${esc(u.name||'-')}</p>
+          <p class="text-[10px] text-slate-400 truncate">${esc(u.email||'')}</p></div>
+          <select onchange="setRole('${u.uid}',this.value)" class="px-2 py-1 rounded-lg border border-slate-200 text-[11px] bg-white">
+            <option value="user" ${u.role==='user'?'selected':''}>สมาชิก</option>
+            <option value="super" ${u.role==='super'?'selected':''}>Super</option>
+            <option value="admin" ${u.role==='admin'?'selected':''}>Admin</option></select>
+          <button onclick="delUser('${u.uid}')" class="text-rose-400 text-xs">🗑</button></div>
+        <select onchange="adminLink('${u.uid}',this.value)" class="w-full mt-2 px-2 py-1.5 rounded-lg border border-slate-200 text-[11px] bg-white">
+          <option value="">— ผูกกับโปรไฟล์สมาชิก —</option>
+          ${players.map(pp=>`<option value="${pp.id}" ${pp.id===u.playerId?'selected':''}>${esc(nameOf(pp.id))}</option>`).join('')}</select>
+      </div>`;}).join('');}}}
+
+authTab('login');
 </script>
 </body>
 </html>
